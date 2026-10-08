@@ -1,0 +1,6 @@
+{
+  "name": "Cuenta Clara",
+  "description": "Gestión inteligente y clara de cuentas, servicios, suscripciones y pagos recurrentes en pesos argentinos y divisas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,214 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User preferences, default currency, and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "defaultCurrency": { "type": "string", "enum": ["ARS", "USD", "EUR"] },
+        "timezone": { "type": "string", "maxLength": 64 },
+        "onboarded": { "type": "boolean" },
+        "theme": { "type": "string", "enum": ["light", "dark", "system"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "defaultCurrency", "onboarded"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "A recurring service, bill, subscription or tax",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128, "minLength": 1 },
+        "provider": { "type": "string", "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 500 },
+        "category": { "type": "string", "maxLength": 64 },
+        "color": { "type": "string", "maxLength": 32 },
+        "icon": { "type": "string", "maxLength": 64 },
+        "providerUrl": { "type": "string", "maxLength": 256 },
+        "clientNumber": { "type": "string", "maxLength": 64 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["ARS", "USD", "EUR"] },
+        "amountType": { "type": "string", "enum": ["fixed", "variable", "estimated"] },
+        "frequency": { "type": "string", "enum": ["weekly", "monthly", "bimonthly", "quarterly", "semiannual", "annual", "custom"] },
+        "dueDay": { "type": "number" },
+        "nextDueDate": { "type": "string", "maxLength": 32 },
+        "startDate": { "type": "string", "maxLength": 32 },
+        "endDate": { "type": "string", "maxLength": 32 },
+        "paymentMethod": { "type": "string", "maxLength": 64 },
+        "autopay": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "paused", "cancelled", "archived"] },
+        "noticeDays": { "type": "number" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "lastAmount": { "type": "number" },
+        "previousAmount": { "type": "number" },
+        "isShared": { "type": "boolean" },
+        "splitTotalPeople": { "type": "number" },
+        "mySharePercentage": { "type": "number" },
+        "splitNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "category", "amount", "currency", "amountType", "frequency", "status"]
+    },
+    "BillInstance": {
+      "title": "BillInstance",
+      "description": "An individual occurrence / due instance of an account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "accountId": { "type": "string", "maxLength": 128 },
+        "accountName": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "dueDate": { "type": "string", "maxLength": 32 },
+        "estimatedAmount": { "type": "number" },
+        "actualAmount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["ARS", "USD", "EUR"] },
+        "status": { "type": "string", "enum": ["upcoming", "pending", "paid", "overdue", "skipped", "cancelled"] },
+        "paidDate": { "type": "string", "maxLength": 32 },
+        "paymentMethod": { "type": "string", "maxLength": 64 },
+        "receiptNumber": { "type": "string", "maxLength": 128 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "isShared": { "type": "boolean" },
+        "splitTotalPeople": { "type": "number" },
+        "mySharePercentage": { "type": "number" },
+        "myShareAmount": { "type": "number" },
+        "splitCollected": { "type": "boolean" },
+        "splitNotes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "accountId", "accountName", "dueDate", "estimatedAmount", "currency", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Recorded payment history item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "accountId": { "type": "string", "maxLength": 128 },
+        "billInstanceId": { "type": "string", "maxLength": 128 },
+        "accountName": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["ARS", "USD", "EUR"] },
+        "paymentDate": { "type": "string", "maxLength": 32 },
+        "paymentMethod": { "type": "string", "maxLength": 64 },
+        "receiptNumber": { "type": "string", "maxLength": 128 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "accountId", "accountName", "amount", "currency", "paymentDate"]
+    },
+    "Income": {
+      "title": "Income",
+      "description": "User income sources for budget and 50-30-20 analysis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "source": { "type": "string", "maxLength": 128, "minLength": 1 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["ARS", "USD", "EUR"] },
+        "frequency": { "type": "string", "enum": ["monthly", "biweekly", "occasional"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "source", "amount", "currency", "frequency"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Category for accounts and expenses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 64 },
+        "icon": { "type": "string", "maxLength": 64 },
+        "color": { "type": "string", "maxLength": 32 },
+        "isCustom": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name"]
+    },
+    "SavingsGoal": {
+      "title": "SavingsGoal",
+      "description": "Saving goal for annual payments, maintenance, taxes or emergencies",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "currency": { "type": "string", "enum": ["ARS", "USD", "EUR"] },
+        "deadline": { "type": "string", "maxLength": 32 },
+        "relatedAccountId": { "type": "string", "maxLength": 128 },
+        "monthlyContribution": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "achieved", "paused"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "targetAmount", "currentAmount", "currency", "status"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app notifications for due dates, overdues and price spikes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["due_soon", "overdue", "price_increase", "trial_ending", "goal_deadline", "info"] },
+        "title": { "type": "string", "maxLength": 128 },
+        "message": { "type": "string", "maxLength": 500 },
+        "accountId": { "type": "string", "maxLength": 128 },
+        "billId": { "type": "string", "maxLength": 128 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "title", "message", "read"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document isolated per user"
+    },
+    "/users/{userId}/accounts/{accountId}": {
+      "schema": "Account",
+      "description": "Accounts and recurring services belonging to the user"
+    },
+    "/users/{userId}/billInstances/{billId}": {
+      "schema": "BillInstance",
+      "description": "Occurrences and due dates of accounts"
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Completed payments record"
+    },
+    "/users/{userId}/incomes/{incomeId}": {
+      "schema": "Income",
+      "description": "User regular and occasional income sources"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Custom and standard categories for user"
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": "SavingsGoal",
+      "description": "Savings goals for user"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "Internal notifications for user"
+    }
+  }
+}

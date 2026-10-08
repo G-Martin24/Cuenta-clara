@@ -1,0 +1,231 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for UserProfile
+    function isValidUserProfile(data, userId) {
+      return data.uid == userId &&
+        data.defaultCurrency in ['ARS', 'USD', 'EUR'] &&
+        data.onboarded is bool &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 256)) &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+        (!('timezone' in data) || (data.timezone is string && data.timezone.size() <= 64)) &&
+        (!('theme' in data) || data.theme in ['light', 'dark', 'system']);
+    }
+
+    // Validation for Account
+    function isValidAccount(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 128 &&
+        data.category is string && data.category.size() <= 64 &&
+        data.amount is number && data.amount >= 0 &&
+        data.currency in ['ARS', 'USD', 'EUR'] &&
+        data.amountType in ['fixed', 'variable', 'estimated'] &&
+        data.frequency in ['weekly', 'monthly', 'bimonthly', 'quarterly', 'semiannual', 'annual', 'custom'] &&
+        data.status in ['active', 'paused', 'cancelled', 'archived'] &&
+        (!('provider' in data) || (data.provider is string && data.provider.size() <= 128)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        (!('color' in data) || (data.color is string && data.color.size() <= 32)) &&
+        (!('icon' in data) || (data.icon is string && data.icon.size() <= 64)) &&
+        (!('providerUrl' in data) || (data.providerUrl is string && data.providerUrl.size() <= 256)) &&
+        (!('clientNumber' in data) || (data.clientNumber is string && data.clientNumber.size() <= 64)) &&
+        (!('dueDay' in data) || (data.dueDay is number && data.dueDay >= 1 && data.dueDay <= 31)) &&
+        (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 64)) &&
+        (!('autopay' in data) || data.autopay is bool) &&
+        (!('noticeDays' in data) || (data.noticeDays is number && data.noticeDays >= 0)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('isShared' in data) || data.isShared is bool) &&
+        (!('splitTotalPeople' in data) || (data.splitTotalPeople is number && data.splitTotalPeople >= 1)) &&
+        (!('mySharePercentage' in data) || (data.mySharePercentage is number && data.mySharePercentage >= 0 && data.mySharePercentage <= 100)) &&
+        (!('splitNotes' in data) || (data.splitNotes is string && data.splitNotes.size() <= 500));
+    }
+
+    // Validation for BillInstance
+    function isValidBillInstance(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.accountId is string && data.accountId.size() <= 128 &&
+        data.accountName is string && data.accountName.size() <= 128 &&
+        data.dueDate is string && data.dueDate.size() <= 32 &&
+        data.estimatedAmount is number && data.estimatedAmount >= 0 &&
+        data.currency in ['ARS', 'USD', 'EUR'] &&
+        data.status in ['upcoming', 'pending', 'paid', 'overdue', 'skipped', 'cancelled'] &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 64)) &&
+        (!('actualAmount' in data) || (data.actualAmount is number && data.actualAmount >= 0)) &&
+        (!('paidDate' in data) || (data.paidDate is string && data.paidDate.size() <= 32)) &&
+        (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 64)) &&
+        (!('receiptNumber' in data) || (data.receiptNumber is string && data.receiptNumber.size() <= 128)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('isShared' in data) || data.isShared is bool) &&
+        (!('splitTotalPeople' in data) || (data.splitTotalPeople is number && data.splitTotalPeople >= 1)) &&
+        (!('mySharePercentage' in data) || (data.mySharePercentage is number && data.mySharePercentage >= 0 && data.mySharePercentage <= 100)) &&
+        (!('myShareAmount' in data) || (data.myShareAmount is number && data.myShareAmount >= 0)) &&
+        (!('splitCollected' in data) || data.splitCollected is bool) &&
+        (!('splitNotes' in data) || (data.splitNotes is string && data.splitNotes.size() <= 500));
+    }
+
+    // Validation for Payment
+    function isValidPayment(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.accountId is string && data.accountId.size() <= 128 &&
+        data.accountName is string && data.accountName.size() <= 128 &&
+        data.amount is number && data.amount >= 0 &&
+        data.currency in ['ARS', 'USD', 'EUR'] &&
+        data.paymentDate is string && data.paymentDate.size() <= 32 &&
+        (!('billInstanceId' in data) || (data.billInstanceId is string && data.billInstanceId.size() <= 128)) &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 64)) &&
+        (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 64)) &&
+        (!('receiptNumber' in data) || (data.receiptNumber is string && data.receiptNumber.size() <= 128)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    // Validation for Income
+    function isValidIncome(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.source is string && data.source.size() > 0 && data.source.size() <= 128 &&
+        data.amount is number && data.amount >= 0 &&
+        data.currency in ['ARS', 'USD', 'EUR'] &&
+        data.frequency in ['monthly', 'biweekly', 'occasional'] &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 128)) &&
+        (!('payDay' in data) || (data.payDay is number && data.payDay >= 1 && data.payDay <= 31)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    // Validation for Category
+    function isValidCategory(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 64 &&
+        (!('icon' in data) || (data.icon is string && data.icon.size() <= 64)) &&
+        (!('color' in data) || (data.color is string && data.color.size() <= 32)) &&
+        (!('isCustom' in data) || data.isCustom is bool);
+    }
+
+    // Validation for SavingsGoal
+    function isValidGoal(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 128 &&
+        data.targetAmount is number && data.targetAmount >= 0 &&
+        data.currentAmount is number && data.currentAmount >= 0 &&
+        data.currency in ['ARS', 'USD', 'EUR'] &&
+        data.status in ['active', 'achieved', 'paused'] &&
+        (!('deadline' in data) || (data.deadline is string && data.deadline.size() <= 32)) &&
+        (!('relatedAccountId' in data) || (data.relatedAccountId is string && data.relatedAccountId.size() <= 128)) &&
+        (!('monthlyContribution' in data) || (data.monthlyContribution is number && data.monthlyContribution >= 0));
+    }
+
+    // Validation for AppNotification
+    function isValidNotification(data, userId) {
+      return data.userId == userId &&
+        data.id is string && data.id.size() <= 128 &&
+        data.type in ['due_soon', 'overdue', 'price_increase', 'trial_ending', 'goal_deadline', 'info'] &&
+        data.title is string && data.title.size() <= 128 &&
+        data.message is string && data.message.size() <= 500 &&
+        data.read is bool &&
+        (!('accountId' in data) || (data.accountId is string && data.accountId.size() <= 128)) &&
+        (!('billId' in data) || (data.billId is string && data.billId.size() <= 128));
+    }
+
+    // User document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Cannot list all users
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidUserProfile(incoming(), userId) && incoming().uid == existing().uid;
+      allow delete: if isOwner(userId);
+
+      // Accounts subcollection
+      match /accounts/{accountId} {
+        allow get: if isOwner(userId) && isValidId(accountId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(accountId) && isValidAccount(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(accountId) && isValidAccount(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(accountId);
+      }
+
+      // Bill instances subcollection
+      match /billInstances/{billId} {
+        allow get: if isOwner(userId) && isValidId(billId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(billId) && isValidBillInstance(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(billId) && isValidBillInstance(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(billId);
+      }
+
+      // Payments subcollection
+      match /payments/{paymentId} {
+        allow get: if isOwner(userId) && isValidId(paymentId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(paymentId) && isValidPayment(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(paymentId) && isValidPayment(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(paymentId);
+      }
+
+      // Incomes subcollection
+      match /incomes/{incomeId} {
+        allow get: if isOwner(userId) && isValidId(incomeId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(incomeId) && isValidIncome(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(incomeId) && isValidIncome(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(incomeId);
+      }
+
+      // Categories subcollection
+      match /categories/{categoryId} {
+        allow get: if isOwner(userId) && isValidId(categoryId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(categoryId) && isValidCategory(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(categoryId) && isValidCategory(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(categoryId);
+      }
+
+      // Goals subcollection
+      match /goals/{goalId} {
+        allow get: if isOwner(userId) && isValidId(goalId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(goalId) && isValidGoal(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(goalId) && isValidGoal(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(goalId);
+      }
+
+      // Notifications subcollection
+      match /notifications/{notificationId} {
+        allow get: if isOwner(userId) && isValidId(notificationId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(notificationId) && isValidNotification(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(notificationId) && isValidNotification(incoming(), userId) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(notificationId);
+      }
+    }
+  }
+}
