@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.cuenta_clara_iota.twa",
+        "sha256_cert_fingerprints": ["92:98:90:AA:41:5F:B8:F4:A3:24:41:98:E9:0C:7F:AD:79:E6:39:52:0B:6D:3A:F6:C8:91:D6:98:86:77:1E:EA"]
+      }
+    }]
