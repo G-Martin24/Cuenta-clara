@@ -529,7 +529,12 @@ const MainApp: React.FC = () => {
 
   // Not logged in -> Auth Screen
   if (!user) {
-    return <AuthView onOpenPrivacy={() => navigateTo('/privacidad')} />;
+    return (
+      <AuthView
+        onOpenPrivacy={() => navigateTo('/privacidad')}
+        onOpenDeleteAccount={() => navigateTo('/eliminar-cuenta')}
+      />
+    );
   }
 
   return (

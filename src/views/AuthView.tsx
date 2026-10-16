@@ -4,9 +4,13 @@ import { useAuth } from '../context/AuthContext';
 
 interface AuthViewProps {
   onOpenPrivacy?: () => void;
+  onOpenDeleteAccount?: () => void;
 }
 
-export const AuthView: React.FC<AuthViewProps> = ({ onOpenPrivacy }) => {
+export const AuthView: React.FC<AuthViewProps> = ({
+  onOpenPrivacy,
+  onOpenDeleteAccount,
+}) => {
   const { signInWithGoogle, loginWithEmail, registerWithEmail, resetPassword, signInGuest } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -83,7 +87,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onOpenPrivacy }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] bg-slate-900 flex flex-col items-center justify-center p-4 py-8">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden">
         {/* Header */}
         <div className="p-8 text-center bg-slate-950 border-b border-slate-800">
@@ -252,8 +256,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onOpenPrivacy }) => {
               <p>
                 ¿No tenés cuenta aún?{' '}
                 <button
+                  type="button"
                   onClick={() => setMode('register')}
-                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
                 >
                   Registrate gratis
                 </button>
@@ -264,8 +269,9 @@ export const AuthView: React.FC<AuthViewProps> = ({ onOpenPrivacy }) => {
               <p>
                 ¿Ya tenés una cuenta?{' '}
                 <button
+                  type="button"
                   onClick={() => setMode('login')}
-                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
                 >
                   Iniciá sesión
                 </button>
@@ -276,26 +282,37 @@ export const AuthView: React.FC<AuthViewProps> = ({ onOpenPrivacy }) => {
               <p>
                 ¿Recordaste tu contraseña?{' '}
                 <button
+                  type="button"
                   onClick={() => setMode('login')}
-                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline"
+                  className="font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer"
                 >
                   Volver al inicio de sesión
                 </button>
               </p>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Public Footer Link */}
-      <div className="mt-4 text-center">
-        <button
-          type="button"
-          onClick={onOpenPrivacy}
-          className="text-xs text-slate-400 hover:text-teal-400 underline underline-offset-4 transition-colors"
-        >
-          Política de privacidad
-        </button>
+          {/* Legal / Privacy Links */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+            <div className="flex items-center justify-center flex-wrap gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+              <button
+                type="button"
+                onClick={onOpenPrivacy}
+                className="text-slate-400 hover:text-teal-400 dark:text-slate-500 dark:hover:text-teal-300 underline decoration-slate-300 dark:decoration-slate-700 underline-offset-4 transition-colors cursor-pointer"
+              >
+                Política de privacidad
+              </button>
+              <span className="text-slate-400 dark:text-slate-600 select-none">·</span>
+              <button
+                type="button"
+                onClick={onOpenDeleteAccount}
+                className="text-slate-400 hover:text-red-400 dark:text-slate-500 dark:hover:text-red-300 underline decoration-slate-300 dark:decoration-slate-700 underline-offset-4 transition-colors cursor-pointer"
+              >
+                Eliminar cuenta
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
