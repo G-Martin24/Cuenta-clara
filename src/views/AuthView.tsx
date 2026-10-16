@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { CheckCircle2, Lock, Mail, User, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export const AuthView: React.FC = () => {
+interface AuthViewProps {
+  onOpenPrivacy?: () => void;
+}
+
+export const AuthView: React.FC<AuthViewProps> = ({ onOpenPrivacy }) => {
   const { signInWithGoogle, loginWithEmail, registerWithEmail, resetPassword, signInGuest } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
@@ -281,6 +285,17 @@ export const AuthView: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Public Footer Link */}
+      <div className="mt-4 text-center">
+        <button
+          type="button"
+          onClick={onOpenPrivacy}
+          className="text-xs text-slate-400 hover:text-teal-400 underline underline-offset-4 transition-colors"
+        >
+          Política de privacidad
+        </button>
       </div>
     </div>
   );

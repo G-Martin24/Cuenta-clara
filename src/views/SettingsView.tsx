@@ -18,7 +18,11 @@ import { NotificationSettingsCard } from '../components/NotificationSettingsCard
 import { PWAInstallButton } from '../components/PWAInstallButton';
 import { applyTheme, getSavedTheme, ThemePreference } from '../utils/theme';
 
-export const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+  onOpenPrivacy?: () => void;
+}
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenPrivacy }) => {
   const { user, userProfile, updateUserPreferences, logout } = useAuth();
 
   const [displayName, setDisplayName] = useState(userProfile?.displayName || user?.displayName || '');
@@ -240,6 +244,28 @@ export const SettingsView: React.FC = () => {
 
       {/* Push & Due Date Notifications Card */}
       <NotificationSettingsCard />
+
+      {/* Privacy Policy Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white">Privacidad y Protección de Datos</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Conocé cómo protegemos tus cuentas, servicios y datos personales.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenPrivacy}
+          className="self-start sm:self-auto px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors shadow-xs active:scale-98"
+        >
+          Política de privacidad
+        </button>
+      </div>
 
       {/* Logout Box */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 flex items-center justify-between">

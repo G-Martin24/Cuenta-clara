@@ -17,6 +17,7 @@ import { GoalsView } from './views/GoalsView';
 import { BudgetIncomeView } from './views/BudgetIncomeView';
 import { SettingsView } from './views/SettingsView';
 import { AuthView } from './views/AuthView';
+import { PrivacyPolicyView } from './views/PrivacyPolicyView';
 import { AddEditAccountModal } from './components/Modals/AddEditAccountModal';
 import { RecordPaymentModal } from './components/Modals/RecordPaymentModal';
 import { ConfirmDeleteModal } from './components/Modals/ConfirmDeleteModal';
@@ -72,6 +73,30 @@ const MainApp: React.FC = () => {
   const { user, userProfile, loading: authLoading, completeOnboarding, bypassLoading } = useAuth();
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+
+  // Public routing state (e.g. /privacidad)
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname;
+    }
+    return '/';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path: string) => {
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', path);
+      setCurrentPath(path);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // Firestore real-time collections
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -473,9 +498,20 @@ const MainApp: React.FC = () => {
     );
   }
 
+  // Public Privacy Policy Page (accessible without logging in)
+  if (currentPath === '/privacidad' || (typeof window !== 'undefined' && window.location.hash === '#privacidad')) {
+    return (
+      <PrivacyPolicyView
+        onBack={() => {
+          navigateTo('/');
+        }}
+      />
+    );
+  }
+
   // Not logged in -> Auth Screen
   if (!user) {
-    return <AuthView />;
+    return <AuthView onOpenPrivacy={() => navigateTo('/privacidad')} />;
   }
 
   return (
@@ -676,9 +712,27 @@ const MainApp: React.FC = () => {
             />
           )}
 
-          {activeTab === 'settings' && <SettingsView />}
+          {activeTab === 'settings' && (
+            <SettingsView onOpenPrivacy={() => navigateTo('/privacidad')} />
+          )}
         </main>
       </div>
+
+      {/* App Footer */}
+      <footer className="w-full border-t border-slate-200 dark:border-slate-800/80 bg-white/40 dark:bg-slate-900/40 py-5 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto mb-16 sm:mb-0">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p>© {new Date().getFullYear()} Cuenta Clara · Control inteligente de vencimientos</p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => navigateTo('/privacidad')}
+              className="hover:text-teal-600 dark:hover:text-teal-400 underline underline-offset-4 transition-colors font-medium"
+            >
+              Política de privacidad
+            </button>
+          </div>
+        </div>
+      </footer>
 
       {/* Mobile Bottom Navigation */}
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
