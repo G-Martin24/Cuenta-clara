@@ -18,6 +18,7 @@ import { BudgetIncomeView } from './views/BudgetIncomeView';
 import { SettingsView } from './views/SettingsView';
 import { AuthView } from './views/AuthView';
 import { PrivacyPolicyView } from './views/PrivacyPolicyView';
+import { DeleteAccountView } from './views/DeleteAccountView';
 import { AddEditAccountModal } from './components/Modals/AddEditAccountModal';
 import { RecordPaymentModal } from './components/Modals/RecordPaymentModal';
 import { ConfirmDeleteModal } from './components/Modals/ConfirmDeleteModal';
@@ -505,6 +506,23 @@ const MainApp: React.FC = () => {
         onBack={() => {
           navigateTo('/');
         }}
+        onNavigateToDeleteAccount={() => {
+          navigateTo('/eliminar-cuenta');
+        }}
+      />
+    );
+  }
+
+  // Public Delete Account Request Page (accessible without logging in)
+  if (currentPath === '/eliminar-cuenta' || (typeof window !== 'undefined' && window.location.hash === '#eliminar-cuenta')) {
+    return (
+      <DeleteAccountView
+        onBack={() => {
+          navigateTo('/');
+        }}
+        onNavigateToPrivacy={() => {
+          navigateTo('/privacidad');
+        }}
       />
     );
   }
@@ -713,7 +731,10 @@ const MainApp: React.FC = () => {
           )}
 
           {activeTab === 'settings' && (
-            <SettingsView onOpenPrivacy={() => navigateTo('/privacidad')} />
+            <SettingsView
+              onOpenPrivacy={() => navigateTo('/privacidad')}
+              onOpenDeleteAccount={() => navigateTo('/eliminar-cuenta')}
+            />
           )}
         </main>
       </div>
@@ -729,6 +750,14 @@ const MainApp: React.FC = () => {
               className="hover:text-teal-600 dark:hover:text-teal-400 underline underline-offset-4 transition-colors font-medium"
             >
               Política de privacidad
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => navigateTo('/eliminar-cuenta')}
+              className="hover:text-red-500 dark:hover:text-red-400 underline underline-offset-4 transition-colors font-medium"
+            >
+              Eliminar cuenta
             </button>
           </div>
         </div>

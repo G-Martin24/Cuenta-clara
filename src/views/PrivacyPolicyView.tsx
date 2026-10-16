@@ -17,9 +17,13 @@ import { useAuth } from '../context/AuthContext';
 
 interface PrivacyPolicyViewProps {
   onBack: () => void;
+  onNavigateToDeleteAccount?: () => void;
 }
 
-export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onBack }) => {
+export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({
+  onBack,
+  onNavigateToDeleteAccount,
+}) => {
   const { user } = useAuth();
 
   return (
@@ -266,14 +270,22 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onBack }) 
                   <strong>Eliminación directa desde la app:</strong> Podés borrar cualquier cuenta, vencimiento, registro de pago, ingreso o meta de ahorro de forma individual en cualquier momento. Al confirmarlo, el documento se elimina inmediatamente de Cloud Firestore.
                 </li>
                 <li>
-                  <strong>Baja definitiva de cuenta y borrado total:</strong> Si deseás eliminar por completo tu cuenta de usuario, tu perfil y la totalidad de tus datos asociados, podés solicitarlo enviando un correo a{' '}
+                  <strong>Baja definitiva de cuenta y borrado total:</strong> Si deseás eliminar por completo tu cuenta de usuario, tu perfil y la totalidad de tus datos asociados en Firebase Authentication y Cloud Firestore, podés revisar los detalles y plazos o iniciar tu trámite directamente en la página de{' '}
+                  <button
+                    type="button"
+                    onClick={onNavigateToDeleteAccount}
+                    className="font-bold text-teal-600 dark:text-teal-400 underline inline-flex items-center gap-1 hover:text-teal-500 cursor-pointer"
+                  >
+                    <span>Solicitud de eliminación de cuenta</span>
+                    <ExternalLink className="w-3.5 h-3.5 inline" />
+                  </button>{' '}
+                  o enviando un correo con el asunto "Solicitud de eliminación de cuenta" a{' '}
                   <a
-                    href="mailto:galbanmartin01@gmail.com?subject=Solicitud%20de%20eliminación%20de%20cuenta%20Cuenta%20Clara"
+                    href="mailto:galbanmartin01@gmail.com?subject=Solicitud%20de%20eliminación%20de%20cuenta"
                     className="font-bold text-teal-600 dark:text-teal-400 underline"
                   >
                     galbanmartin01@gmail.com
-                  </a>{' '}
-                  indicando la dirección de correo con la que te registraste. Procesaremos tu solicitud borrando tu usuario en Firebase Authentication y todos tus registros de Firestore.
+                  </a>.
                 </li>
               </ol>
             </div>
@@ -390,6 +402,17 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onBack }) 
             </button>
             <span>•</span>
             <span className="text-teal-600 dark:text-teal-400 font-semibold">Política de privacidad</span>
+            {onNavigateToDeleteAccount && (
+              <>
+                <span>•</span>
+                <button
+                  onClick={onNavigateToDeleteAccount}
+                  className="hover:text-red-500 dark:hover:text-red-400 underline underline-offset-4 transition-colors cursor-pointer"
+                >
+                  Eliminar cuenta
+                </button>
+              </>
+            )}
           </div>
         </div>
       </footer>

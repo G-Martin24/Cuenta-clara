@@ -11,6 +11,7 @@ import {
   LogOut,
   Save,
   Check,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CurrencyCode } from '../types';
@@ -20,9 +21,13 @@ import { applyTheme, getSavedTheme, ThemePreference } from '../utils/theme';
 
 interface SettingsViewProps {
   onOpenPrivacy?: () => void;
+  onOpenDeleteAccount?: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenPrivacy }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  onOpenPrivacy,
+  onOpenDeleteAccount,
+}) => {
   const { user, userProfile, updateUserPreferences, logout } = useAuth();
 
   const [displayName, setDisplayName] = useState(userProfile?.displayName || user?.displayName || '');
@@ -264,6 +269,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onOpenPrivacy }) => 
           className="self-start sm:self-auto px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors shadow-xs active:scale-98"
         >
           Política de privacidad
+        </button>
+      </div>
+
+      {/* Account Deletion Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-red-200 dark:border-red-950/60 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white">Eliminación de cuenta y datos</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Conocé el procedimiento y enviá la solicitud para borrar permanentemente tu usuario y registros.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenDeleteAccount}
+          className="self-start sm:self-auto px-4 py-2 rounded-lg border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-semibold transition-colors shadow-xs active:scale-98 cursor-pointer"
+        >
+          Solicitar eliminación
         </button>
       </div>
 
