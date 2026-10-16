@@ -83,9 +83,11 @@ export const AuthView: React.FC = () => {
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden">
         {/* Header */}
         <div className="p-8 text-center bg-slate-950 border-b border-slate-800">
-          <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-teal-900/50">
-            <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
-          </div>
+          <img
+            src="/icon.svg"
+            alt="Cuenta Clara Logo"
+            className="w-16 h-16 rounded-2xl mx-auto mb-3 shadow-xl shadow-teal-950/60 ring-1 ring-white/10 object-contain"
+          />
           <h1 className="text-2xl font-extrabold text-white tracking-tight">Cuenta Clara</h1>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
             Gestión de servicios, suscripciones y vencimientos en pesos argentinos y divisas.

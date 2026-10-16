@@ -1,32 +1,92 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f766e" />
-      <stop offset="50%" stop-color="#0d9488" />
-      <stop offset="100%" stop-color="#047857" />
-    </linearGradient>
-    <linearGradient id="shield" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
-    </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#022c22" flood-opacity="0.45" />
-    </filter>
-  </defs>
+  <!-- 1. Deep Midnight Navy Background -->
+  <rect width="512" height="512" fill="#050B18" />
 
-  <!-- Base background -->
-  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <g transform="translate(0, 0)">
+    <!-- 2. Protruding White Document / Invoice with rounded corners -->
+    <g transform="translate(244, 174) rotate(-3.5) translate(-244, -174)">
+      <rect x="158" y="104" width="174" height="136" rx="26" fill="#FFFFFF" />
+      <!-- Invoice lines -->
+      <rect x="182" y="138" width="80" height="13" rx="6.5" fill="#0E1C30" />
+      <rect x="182" y="165" width="68" height="13" rx="6.5" fill="#0E1C30" />
+      <rect x="182" y="192" width="50" height="13" rx="6.5" fill="#0E1C30" />
+    </g>
 
-  <!-- Glass overlay card -->
-  <rect x="64" y="64" width="384" height="384" rx="80" fill="url(#shield)" stroke="#ffffff" stroke-width="4" stroke-opacity="0.3" filter="url(#shadow)" />
+    <!-- 3. Financial Bar Chart (3 Teal Pillars) -->
+    <!-- Column 1 (Short) -->
+    <rect x="284" y="176" width="17" height="42" rx="8.5" fill="#00C4AC" />
+    <!-- Column 2 (Medium) -->
+    <rect x="309" y="152" width="17" height="66" rx="8.5" fill="#00C4AC" />
+    <!-- Column 3 (Tall) -->
+    <rect x="339" y="132" width="17" height="86" rx="8.5" fill="#00C4AC" />
 
-  <!-- Center Circle for Checkmark -->
-  <circle cx="256" cy="240" r="110" fill="#ffffff" />
+    <!-- 4. Wallet Base & Dark Interior Cavity -->
+    <!-- Dark navy inner pocket / recessed lining -->
+    <path d="M 130 205
+             C 130 190, 145 182, 160 190
+             L 230 230
+             C 240 236, 252 236, 262 230
+             L 362 176
+             C 372 170, 385 178, 385 192
+             L 385 360
+             C 385 376, 374 388, 360 392
+             L 266 428
+             C 256 431, 246 431, 236 428
+             L 160 402
+             C 142 396, 130 384, 130 365
+             Z"
+          fill="#041E2D" />
 
-  <!-- Teal Checkmark -->
-  <path d="M196 238 L238 280 L322 196" fill="none" stroke="#0d9488" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Wallet Upper-Left Outer Rim (Teal) -->
+    <path d="M 130 205
+             C 130 190, 145 182, 160 190
+             L 230 230
+             C 236 233, 244 235, 250 235
+             L 210 275
+             L 155 250
+             L 130 270
+             Z"
+          fill="#00C4AC" />
 
-  <!-- Badge at bottom: ARG -->
-  <rect x="186" y="380" width="140" height="42" rx="21" fill="#f59e0b" />
-  <text x="256" y="408" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="900" fill="#0f172a" text-anchor="middle" letter-spacing="3">CUENTAS</text>
+    <!-- Wallet Lower Shell / Base in Teal (#00C4AC) -->
+    <path d="M 130 310
+             L 130 365
+             C 130 384, 142 396, 160 402
+             L 236 428
+             C 246 431, 256 431, 266 428
+             L 360 392
+             C 374 387, 382 376, 382 360
+             L 382 336
+             L 350 336
+             L 248 384
+             C 240 388, 230 388, 222 384
+             L 154 346
+             C 142 338, 132 326, 130 310
+             Z"
+          fill="#00C4AC" />
+
+    <!-- 5. BOLD TEAL CHECKMARK SWEEPING ACROSS THE WALLET -->
+    <path d="M 172 292
+             L 220 346
+             C 225 352, 235 352, 240 346
+             L 326 248
+             C 330 244, 336 244, 342 248
+             L 374 248
+             C 388 248, 400 260, 400 274
+             L 400 306
+             C 400 320, 388 332, 374 332
+             L 320 332
+             C 312 332, 304 326, 300 318
+             L 234 384
+             C 226 392, 214 392, 206 384
+             L 148 318
+             C 140 308, 144 294, 156 288
+             C 162 286, 168 288, 172 292
+             Z"
+          fill="#00C4AC" />
+
+    <!-- Clasp with amber-orange button -->
+    <rect x="312" y="250" width="90" height="78" rx="26" fill="#00C4AC" />
+    <circle cx="344" cy="289" r="14" fill="#F59E0B" />
+  </g>
 </svg>

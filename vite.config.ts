@@ -15,6 +15,7 @@ export default defineConfig(() => {
           'favicon.ico',
           'apple-touch-icon.png',
           'icon.svg',
+          'icon.png',
           'pwa-192x192.png',
           'pwa-512x512.png',
           'pwa-maskable-512x512.png',
@@ -40,6 +41,12 @@ export default defineConfig(() => {
             },
             {
               src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: '/icon.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any',
