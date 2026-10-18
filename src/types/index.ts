@@ -1,4 +1,53 @@
-export type CurrencyCode = 'ARS' | 'USD' | 'EUR';
+export type CurrencyCode =
+  | 'ARS'
+  | 'BOB'
+  | 'CLP'
+  | 'COP'
+  | 'CRC'
+  | 'CUP'
+  | 'DOP'
+  | 'EUR'
+  | 'GTQ'
+  | 'HNL'
+  | 'MXN'
+  | 'NIO'
+  | 'PAB'
+  | 'PEN'
+  | 'PYG'
+  | 'USD'
+  | 'UYU'
+  | 'VES';
+
+export interface CurrencyOption {
+  code: CurrencyCode;
+  name: string;
+  decimals: number;
+}
+
+export const SUPPORTED_CURRENCIES: CurrencyOption[] = [
+  { code: 'ARS', name: 'Peso argentino', decimals: 2 },
+  { code: 'BOB', name: 'Boliviano', decimals: 2 },
+  { code: 'CLP', name: 'Peso chileno', decimals: 0 },
+  { code: 'COP', name: 'Peso colombiano', decimals: 2 },
+  { code: 'CRC', name: 'Colón costarricense', decimals: 2 },
+  { code: 'CUP', name: 'Peso cubano', decimals: 2 },
+  { code: 'DOP', name: 'Peso dominicano', decimals: 2 },
+  { code: 'EUR', name: 'Euro', decimals: 2 },
+  { code: 'GTQ', name: 'Quetzal guatemalteco', decimals: 2 },
+  { code: 'HNL', name: 'Lempira hondureño', decimals: 2 },
+  { code: 'MXN', name: 'Peso mexicano', decimals: 2 },
+  { code: 'NIO', name: 'Córdoba nicaragüense', decimals: 2 },
+  { code: 'PAB', name: 'Balboa panameño', decimals: 2 },
+  { code: 'PEN', name: 'Sol peruano', decimals: 2 },
+  { code: 'PYG', name: 'Guaraní paraguayo', decimals: 0 },
+  { code: 'USD', name: 'Dólar estadounidense', decimals: 2 },
+  { code: 'UYU', name: 'Peso uruguayo', decimals: 2 },
+  { code: 'VES', name: 'Bolívar venezolano', decimals: 2 },
+];
+
+export { SUPPORTED_TIMEZONES, DEFAULT_TIMEZONE } from '../utils/timezone';
+export type { TimezoneOption } from '../utils/timezone';
+
 export type AmountType = 'fixed' | 'variable' | 'estimated';
 export type AccountFrequency =
   | 'weekly'

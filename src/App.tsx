@@ -31,6 +31,7 @@ import { OnboardingModal } from './components/Modals/OnboardingModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { checkAndTriggerDueNotifications } from './services/notificationService';
 import { applyTheme, getSavedTheme } from './utils/theme';
+import { getStoredTimezone } from './utils/timezone';
 import {
   subscribeAccounts,
   subscribeBillInstances,
@@ -190,6 +191,7 @@ const MainApp: React.FC = () => {
   }, [user]);
 
   const defaultCurrency: CurrencyCode = userProfile?.defaultCurrency || 'ARS';
+  const userTimezone: string = userProfile?.timezone || getStoredTimezone();
 
   // Proactive Due Date Reminders and Background Sync
   useEffect(() => {
@@ -198,7 +200,8 @@ const MainApp: React.FC = () => {
     checkAndTriggerDueNotifications(
       user.uid,
       bills,
-      userProfile?.notificationSettings
+      userProfile?.notificationSettings,
+      userTimezone
     ).then((res) => {
       if (res.triggeredCount > 0) {
         console.log(`[Cuenta Clara] Disparados ${res.triggeredCount} avisos proactivos de vencimiento.`);
@@ -206,7 +209,7 @@ const MainApp: React.FC = () => {
     }).catch((err) => {
       console.warn('Error en chequeo de notificaciones de vencimiento:', err);
     });
-  }, [user, bills, userProfile?.notificationSettings]);
+  }, [user, bills, userProfile?.notificationSettings, userTimezone]);
 
   // Clean up any old pre-generated future speculative bills (status === 'upcoming')
   useEffect(() => {
@@ -684,6 +687,7 @@ const MainApp: React.FC = () => {
               }}
               onOpenAddBill={() => handleOpenAddBill()}
               defaultCurrency={defaultCurrency}
+              timezone={userTimezone}
             />
           )}
 

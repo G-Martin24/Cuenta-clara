@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, DollarSign, Briefcase, Plus, AlertCircle, Calendar, Tag } from 'lucide-react';
-import { CurrencyCode, Income, IncomeFrequency, DEFAULT_INCOME_CATEGORIES } from '../../types';
+import { CurrencyCode, Income, IncomeFrequency, DEFAULT_INCOME_CATEGORIES, SUPPORTED_CURRENCIES } from '../../types';
 
 interface AddIncomeModalProps {
   isOpen: boolean;
@@ -242,9 +242,11 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold focus:ring-2 focus:ring-teal-500"
               >
-                <option value="ARS">ARS (Pesos)</option>
-                <option value="USD">USD (Dólares)</option>
-                <option value="EUR">EUR (Euros)</option>
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

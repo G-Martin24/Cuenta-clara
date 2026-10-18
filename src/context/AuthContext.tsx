@@ -14,6 +14,7 @@ import {
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase/config';
 import { UserProfile, CurrencyCode } from '../types';
+import { getStoredTimezone, setStoredTimezone } from '../utils/timezone';
 
 interface AuthContextType {
   user: User | null;
@@ -57,12 +58,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // ignore
     }
 
+    const savedCurrency = (localStorage.getItem('cuentaclara_default_currency') as CurrencyCode) || 'ARS';
+    const savedTimezone = getStoredTimezone();
     const fallbackProfile: UserProfile = {
       uid: firebaseUser.uid,
       email: firebaseUser.email || '',
       displayName: firebaseUser.displayName || 'Usuario',
-      defaultCurrency: 'ARS',
-      timezone: 'America/Argentina/Buenos_Aires',
+      defaultCurrency: savedCurrency,
+      timezone: savedTimezone,
       onboarded: true,
       theme: 'light',
       createdAt: new Date().toISOString(),
@@ -83,6 +86,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (snap && snap.exists && snap.exists()) {
         const profileData = snap.data() as UserProfile;
         setUserProfile(profileData);
+        if (profileData.timezone) {
+          setStoredTimezone(profileData.timezone);
+        }
+        if (profileData.defaultCurrency) {
+          try {
+            localStorage.setItem('cuentaclara_default_currency', profileData.defaultCurrency);
+          } catch (_) {}
+        }
         try {
           localStorage.setItem(cacheKey, JSON.stringify(profileData));
         } catch (_) {}
@@ -198,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
+      auth.languageCode = 'es';
       await sendPasswordResetEmail(auth, email);
     } catch (error: any) {
       console.error('Password Reset Error:', error);
@@ -228,7 +240,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUserProfile((prev) => {
       const next = prev ? { ...prev, ...updated } : ({ uid: user.uid, ...updated } as UserProfile);
       try {
+        localStorage.setItem(`cc_profile_${user.uid}`, JSON.stringify(next));
         localStorage.setItem(`cuentaclara_profile_${user.uid}`, JSON.stringify(next));
+        if (next.defaultCurrency) {
+          localStorage.setItem('cuentaclara_default_currency', next.defaultCurrency);
+        }
+        if (next.timezone) {
+          setStoredTimezone(next.timezone);
+        }
       } catch (_) {}
       return next;
     });
@@ -246,7 +265,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const completeOnboarding = async (currency: CurrencyCode, timezone = 'America/Argentina/Buenos_Aires') => {
+  const completeOnboarding = async (currency: CurrencyCode, timezone = getStoredTimezone()) => {
+    setStoredTimezone(timezone);
     await updateUserPreferences({
       defaultCurrency: currency,
       timezone,

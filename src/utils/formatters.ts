@@ -1,20 +1,28 @@
 import { AccountFrequency, CurrencyCode } from '../types';
 
+// Currencies that do not use minor units (0 decimals) in standard practice
+const ZERO_DECIMAL_CURRENCIES: ReadonlySet<string> = new Set(['CLP', 'PYG']);
+
 /**
- * Formats monetary amounts strictly as:
+ * Formats monetary amounts unambiguously with ISO code:
  * ARS 125.000,00
+ * CLP 15.000
+ * PYG 500.000
  * USD 25,00
  * EUR 25,00
  */
 export function formatCurrency(amount: number | undefined | null, currency: CurrencyCode = 'ARS'): string {
+  const isZeroDecimal = ZERO_DECIMAL_CURRENCIES.has(currency);
+  const decimals = isZeroDecimal ? 0 : 2;
+
   if (amount === undefined || amount === null || isNaN(amount)) {
-    return `${currency} 0,00`;
+    return `${currency} ${isZeroDecimal ? '0' : '0,00'}`;
   }
 
-  // Format with Argentine number notation (dots for thousands, comma for decimals)
+  // Format with standard Spanish/Latin American notation (dots for thousands, comma for decimals)
   const formatted = new Intl.NumberFormat('es-AR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount);
 
   return `${currency} ${formatted}`;

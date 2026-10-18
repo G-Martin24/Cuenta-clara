@@ -9,7 +9,7 @@ import {
   Receipt,
   Users,
 } from 'lucide-react';
-import { Account, BillInstance, CurrencyCode } from '../../types';
+import { Account, BillInstance, CurrencyCode, SUPPORTED_CURRENCIES } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 
 interface AddEditBillModalProps {
@@ -286,12 +286,11 @@ export const AddEditBillModal: React.FC<AddEditBillModalProps> = ({
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold focus:ring-2 focus:ring-teal-500 focus:outline-hidden"
               >
-                <option value="ARS">ARS ($)</option>
-                <option value="USD">USD (u$s)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="BRL">BRL (R$)</option>
-                <option value="UYU">UYU ($U)</option>
-                <option value="CLP">CLP ($)</option>
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

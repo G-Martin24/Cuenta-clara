@@ -19,6 +19,7 @@ import {
   AccountFrequency,
   AmountType,
   CurrencyCode,
+  SUPPORTED_CURRENCIES,
   DEFAULT_CATEGORIES,
   PAYMENT_METHODS,
 } from '../../types';
@@ -366,9 +367,11 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
                       onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
                     >
-                      <option value="ARS">ARS ($)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
+                      {SUPPORTED_CURRENCIES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} — {c.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

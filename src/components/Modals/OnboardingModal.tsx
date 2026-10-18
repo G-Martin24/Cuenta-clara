@@ -8,7 +8,8 @@ import {
   Layers,
   Check,
 } from 'lucide-react';
-import { CurrencyCode } from '../../types';
+import { CurrencyCode, SUPPORTED_CURRENCIES } from '../../types';
+import { SUPPORTED_TIMEZONES, detectUserTimezone } from '../../utils/timezone';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ interface OnboardingModalProps {
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onFinish }) => {
   const [step, setStep] = useState(1);
   const [currency, setCurrency] = useState<CurrencyCode>('ARS');
-  const [timezone, setTimezone] = useState('America/Argentina/Buenos_Aires');
+  const [timezone, setTimezone] = useState<string>(() => detectUserTimezone());
   const [importStarterData, setImportStarterData] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -68,7 +69,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onFini
                   ¿Cuál es tu moneda principal?
                 </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Por defecto configuramos Pesos Argentinos (ARS), pero podrás registrar cuentas en USD y EUR cuando lo necesites.
+                  Configurá tu moneda principal para reportes y balances. También podrás registrar cuentas en cualquier moneda cuando lo necesites.
                 </p>
               </div>
 
@@ -97,6 +98,23 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onFini
                     )}
                   </button>
                 ))}
+
+                <div className="pt-2">
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    O seleccioná otra moneda de Latinoamérica:
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-semibold focus:ring-2 focus:ring-teal-500"
+                  >
+                    {SUPPORTED_CURRENCIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code} — {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           )}
@@ -117,30 +135,30 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onFini
               </div>
 
               <div className="pt-2">
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Zona horaria seleccionada
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Zona horaria seleccionada
+                  </label>
+                  <span className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">
+                    Oficial IANA
+                  </span>
+                </div>
                 <select
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium focus:ring-2 focus:ring-teal-500"
                 >
-                  <option value="America/Argentina/Buenos_Aires">
-                    America/Argentina/Buenos_Aires (GMT-3) - Argentina
-                  </option>
-                  <option value="America/Argentina/Cordoba">
-                    America/Argentina/Cordoba (GMT-3)
-                  </option>
-                  <option value="America/Montevideo">
-                    America/Montevideo (GMT-3) - Uruguay
-                  </option>
-                  <option value="America/Santiago">
-                    America/Santiago (GMT-4/GMT-3) - Chile
-                  </option>
-                  <option value="UTC">UTC (Universal)</option>
+                  {SUPPORTED_TIMEZONES.map((tz) => (
+                    <option key={tz.id} value={tz.id}>
+                      {tz.label}
+                    </option>
+                  ))}
+                  {!SUPPORTED_TIMEZONES.some((tz) => tz.id === timezone) && (
+                    <option value={timezone}>{timezone}</option>
+                  )}
                 </select>
                 <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  🇦🇷 Formato de fecha estándar argentino: <strong>DD/MM/YYYY</strong>
+                  🌍 <strong>Alineación horaria automática:</strong> Las fechas de vencimiento, notificaciones y calendario se calcularán según tu horario local y sus cambios estacionales (horario de verano).
                 </div>
               </div>
             </div>

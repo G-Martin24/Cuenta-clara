@@ -2,6 +2,7 @@ import { BillInstance, AppNotification, NotificationSettings } from '../types';
 import { db } from '../firebase/config';
 import { generateId } from './firestoreService';
 import { collection, doc, setDoc } from 'firebase/firestore';
+import { getTodayYMD } from '../utils/timezone';
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   enabled: true,
@@ -180,13 +181,13 @@ export async function syncRemindersToServiceWorker(bills: BillInstance[]) {
 export async function checkAndTriggerDueNotifications(
   userId: string,
   bills: BillInstance[],
-  settings: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS
+  settings: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS,
+  timezone?: string
 ): Promise<{ triggeredCount: number }> {
   if (!settings.enabled) return { triggeredCount: 0 };
 
   const permission = getNotificationPermission();
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getTodayYMD(timezone);
 
   let triggeredCount = 0;
 

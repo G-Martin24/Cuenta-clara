@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Target, DollarSign, Calendar, AlertCircle, Link2 } from 'lucide-react';
-import { CurrencyCode, SavingsGoal, Account } from '../../types';
+import { CurrencyCode, SavingsGoal, Account, SUPPORTED_CURRENCIES } from '../../types';
 
 interface AddGoalModalProps {
   isOpen: boolean;
@@ -215,9 +215,11 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
-                <option value="ARS">ARS (Pesos)</option>
-                <option value="USD">USD (Dólares)</option>
-                <option value="EUR">EUR (Euros)</option>
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

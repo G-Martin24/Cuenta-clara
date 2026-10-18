@@ -14,10 +14,15 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { CurrencyCode } from '../types';
+import { CurrencyCode, SUPPORTED_CURRENCIES } from '../types';
 import { NotificationSettingsCard } from '../components/NotificationSettingsCard';
 import { PWAInstallButton } from '../components/PWAInstallButton';
 import { applyTheme, getSavedTheme, ThemePreference } from '../utils/theme';
+import {
+  SUPPORTED_TIMEZONES,
+  getStoredTimezone,
+  setStoredTimezone,
+} from '../utils/timezone';
 
 interface SettingsViewProps {
   onOpenPrivacy?: () => void;
@@ -32,7 +37,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [displayName, setDisplayName] = useState(userProfile?.displayName || user?.displayName || '');
   const [currency, setCurrency] = useState<CurrencyCode>(userProfile?.defaultCurrency || 'ARS');
-  const [timezone, setTimezone] = useState(userProfile?.timezone || 'America/Argentina/Buenos_Aires');
+  const [timezone, setTimezone] = useState(userProfile?.timezone || getStoredTimezone());
   const [theme, setTheme] = useState<ThemePreference>(userProfile?.theme || getSavedTheme());
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,6 +81,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try {
       // Re-apply and persist
       applyTheme(theme);
+      setStoredTimezone(timezone);
       await updateUserPreferences({
         displayName: displayName.trim(),
         defaultCurrency: currency,
@@ -140,9 +146,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
             className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
-            <option value="ARS">ARS (Pesos Argentinos - ej. ARS 125.000,00)</option>
-            <option value="USD">USD (Dólares Estadounidenses - ej. USD 25,00)</option>
-            <option value="EUR">EUR (Euros - ej. EUR 25,00)</option>
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code} — {c.name}
+              </option>
+            ))}
           </select>
           <p className="text-[11px] text-slate-500 mt-1">
             Las cuentas individuales pueden configurarse con cualquier moneda independientemente.
@@ -151,20 +159,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* Zona Horaria */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-            Zona horaria
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Zona horaria
+            </label>
+            <span className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">
+              Horario oficial IANA
+            </span>
+          </div>
           <select
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
             className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           >
-            <option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires (GMT-3)</option>
-            <option value="America/Argentina/Cordoba">America/Argentina/Cordoba (GMT-3)</option>
-            <option value="America/Montevideo">America/Montevideo (GMT-3)</option>
-            <option value="America/Santiago">America/Santiago (GMT-4)</option>
-            <option value="UTC">UTC (Universal)</option>
+            {SUPPORTED_TIMEZONES.map((tz) => (
+              <option key={tz.id} value={tz.id}>
+                {tz.label}
+              </option>
+            ))}
+            {!SUPPORTED_TIMEZONES.some((tz) => tz.id === timezone) && (
+              <option value={timezone}>{timezone}</option>
+            )}
           </select>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Ajusta automáticamente el calendario, los vencimientos del día y las alertas según el huso horario y horario de verano de tu país.
+          </p>
         </div>
 
         {/* Theme preference */}

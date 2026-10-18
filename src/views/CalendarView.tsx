@@ -14,12 +14,14 @@ import {
 import { BillInstance, CurrencyCode } from '../types';
 import { formatCurrency, formatDateAr, formatMonthName } from '../utils/formatters';
 import { getDaysUntil, getDaysInMonth, formatYMD } from '../utils/recurrence';
+import { getNowPartsInTimezone } from '../utils/timezone';
 
 interface CalendarViewProps {
   bills: BillInstance[];
   onOpenRecordPayment: (bill: BillInstance) => void;
   onOpenAddBill?: () => void;
   defaultCurrency: CurrencyCode;
+  timezone?: string;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
@@ -27,10 +29,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenRecordPayment,
   onOpenAddBill,
   defaultCurrency,
+  timezone,
 }) => {
-  const today = new Date();
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1); // 1-12
+  const todayParts = useMemo(() => getNowPartsInTimezone(timezone), [timezone]);
+  const [currentYear, setCurrentYear] = useState(() => todayParts.year);
+  const [currentMonth, setCurrentMonth] = useState(() => todayParts.month); // 1-12
   const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
   const [selectedDayBills, setSelectedDayBills] = useState<{ day: number; bills: BillInstance[] } | null>(null);
 
@@ -92,7 +95,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const getBillColorStatus = (b: BillInstance) => {
     if (b.status === 'paid') return 'green';
-    const days = getDaysUntil(b.dueDate);
+    const days = getDaysUntil(b.dueDate, timezone);
     if (days < 0 || b.status === 'overdue') return 'red';
     return 'yellow';
   };
@@ -243,9 +246,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 0
               );
               const isToday =
-                today.getFullYear() === currentYear &&
-                today.getMonth() + 1 === currentMonth &&
-                today.getDate() === day;
+                todayParts.year === currentYear &&
+                todayParts.month === currentMonth &&
+                todayParts.day === day;
 
               return (
                 <div
@@ -354,7 +357,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
               .map((b) => {
                 const color = getBillColorStatus(b);
-                const days = getDaysUntil(b.dueDate);
+                const days = getDaysUntil(b.dueDate, timezone);
                 return (
                   <div
                     key={b.id}

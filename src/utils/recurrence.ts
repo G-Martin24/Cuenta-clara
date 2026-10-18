@@ -1,4 +1,5 @@
 import { AccountFrequency } from '../types';
+import { getTodayYMD } from './timezone';
 
 /**
  * Returns the maximum days in a specific year and month (1-indexed month: 1=Jan, 12=Dec).
@@ -97,12 +98,12 @@ export function generateNextDates(
 }
 
 /**
- * Calculates days difference from today.
+ * Calculates days difference from today in the user's timezone.
  * Negative means overdue, 0 means today, positive means in future.
+ * Automatically respects DST without fixed offsets.
  */
-export function getDaysUntil(dueDateStr: string): number {
-  const now = new Date();
-  const todayStr = formatYMD(now.getFullYear(), now.getMonth() + 1, now.getDate());
+export function getDaysUntil(dueDateStr: string, timezone?: string): number {
+  const todayStr = getTodayYMD(timezone);
   const [ty, tm, td] = todayStr.split('-').map(Number);
   const [dy, dm, dd] = dueDateStr.split('-').map(Number);
 
