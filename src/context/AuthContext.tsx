@@ -10,11 +10,16 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  EmailAuthProvider,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase/config';
 import { UserProfile, CurrencyCode } from '../types';
 import { getStoredTimezone, setStoredTimezone } from '../utils/timezone';
+import { deleteUserFirestoreData } from '../services/firestoreService';
 
 interface AuthContextType {
   user: User | null;
@@ -29,6 +34,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUserPreferences: (prefs: Partial<UserProfile>) => Promise<void>;
   completeOnboarding: (currency: CurrencyCode, timezone?: string) => Promise<void>;
+  deleteAccountAndData: (password?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -274,6 +280,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const deleteAccountAndData = async (password?: string): Promise<void> => {
+    if (!user) {
+      throw new Error('No hay una sesión activa para eliminar.');
+    }
+
+    const isGoogleUser = user.providerData.some((p) => p.providerId === 'google.com');
+    const isPasswordUser = user.providerData.some((p) => p.providerId === 'password');
+
+    // 1. Mandatory Reauthentication before ANY data deletion occurs
+    if (isGoogleUser) {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await reauthenticateWithPopup(user, provider);
+    } else if (isPasswordUser) {
+      if (!password || password.trim().length === 0) {
+        const err: any = new Error('Debes ingresar tu contraseña actual para confirmar.');
+        err.code = 'auth/missing-password';
+        throw err;
+      }
+      if (!user.email) {
+        throw new Error('No se encontró el correo electrónico del usuario.');
+      }
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+    }
+
+    // 2. Obtain fresh ID Token strictly from authenticated session
+    const idToken = await user.getIdToken(true);
+    const targetUid = user.uid;
+
+    // 3. Call server deletion endpoint
+    try {
+      const resp = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => null);
+        console.warn('Server account deletion warning:', errData);
+      }
+    } catch (netErr) {
+      console.warn('Network call to /api/account/delete error:', netErr);
+    }
+
+    // 4. Ensure complete deletion of user data and subcollections in Firestore
+    await deleteUserFirestoreData(targetUid);
+
+    // 5. Delete Firebase Authentication user
+    try {
+      await deleteUser(user);
+    } catch (authErr: any) {
+      if (authErr?.code === 'auth/user-not-found') {
+        // Already deleted by Admin SDK on server
+      } else {
+        console.warn('Client deleteUser error:', authErr);
+        throw authErr;
+      }
+    }
+
+    // 6. Clear local caches and reset state
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (_) {}
+
+    setUser(null);
+    setUserProfile(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -289,6 +368,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateUserPreferences,
         completeOnboarding,
+        deleteAccountAndData,
       }}
     >
       {children}

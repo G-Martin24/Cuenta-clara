@@ -258,19 +258,22 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({
                 <Trash2 className="w-5 h-5" />
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                7. Cómo solicitar la eliminación de tu cuenta y datos
+                7. Cómo solicitar y ejecutar la eliminación de tu cuenta y datos
               </h2>
             </div>
             <div className="space-y-3 text-slate-600 dark:text-slate-300">
               <p>
-                Respetamos plenamente tu derecho al olvido y la supresión de datos personales:
+                Respetamos plenamente tu derecho al olvido y la supresión total de datos personales:
               </p>
-              <ol className="list-decimal pl-5 space-y-2">
+              <ol className="list-decimal pl-5 space-y-2.5">
                 <li>
-                  <strong>Eliminación directa desde la app:</strong> Podés borrar cualquier cuenta, vencimiento, registro de pago, ingreso o meta de ahorro de forma individual en cualquier momento. Al confirmarlo, el documento se elimina inmediatamente de Cloud Firestore.
+                  <strong>Eliminación directa de registros desde la app:</strong> Podés borrar cualquier cuenta, vencimiento, comprobante de pago, ingreso o meta de ahorro de forma individual en cualquier momento. Al confirmarlo, el documento se elimina inmediatamente de Cloud Firestore.
                 </li>
                 <li>
-                  <strong>Baja definitiva de cuenta y borrado total:</strong> Si deseás eliminar por completo tu cuenta de usuario, tu perfil y la totalidad de tus datos asociados en Firebase Authentication y Cloud Firestore, podés revisar los detalles y plazos o iniciar tu trámite directamente en la página de{' '}
+                  <strong>Autoservicio de baja total inmediata en Configuración:</strong> Los usuarios autenticados pueden eliminar su cuenta y todos sus registros asociados de manera inmediata y permanente ingresando a <strong>Configuración → Eliminación de cuenta y datos → Eliminar mi cuenta ahora</strong>. Por motivos de seguridad, el sistema exige reautenticación (mediante tu contraseña actual o Google Sign-In) y escribir la palabra <code>ELIMINAR</code> (en mayúsculas o minúsculas). Al completarse, se destruyen todos los documentos en Cloud Firestore (perfil, cuentas, facturas, comprobantes, presupuestos, metas, notificaciones) y se elimina tu usuario en Firebase Authentication, cerrando la sesión de inmediato.
+                </li>
+                <li>
+                  <strong>Solicitud externa para usuarios sin acceso (Google Play):</strong> Si no podés ingresar a tu cuenta o preferís que el equipo de soporte gestione la baja, podés consultar la página pública de{' '}
                   <button
                     type="button"
                     onClick={onNavigateToDeleteAccount}
@@ -279,13 +282,14 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({
                     <span>Solicitud de eliminación de cuenta</span>
                     <ExternalLink className="w-3.5 h-3.5 inline" />
                   </button>{' '}
-                  o enviando un correo con el asunto "Solicitud de eliminación de cuenta" a{' '}
+                  o enviar un correo electrónico con el asunto "Solicitud de eliminación de cuenta" a{' '}
                   <a
                     href="mailto:galbanmartin01@gmail.com?subject=Solicitud%20de%20eliminación%20de%20cuenta"
                     className="font-bold text-teal-600 dark:text-teal-400 underline"
                   >
                     galbanmartin01@gmail.com
-                  </a>.
+                  </a>{' '}
+                  desde el mismo correo registrado.
                 </li>
               </ol>
             </div>

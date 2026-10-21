@@ -12,11 +12,14 @@ import {
   Save,
   Check,
   Trash2,
+  AlertTriangle,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CurrencyCode, SUPPORTED_CURRENCIES } from '../types';
 import { NotificationSettingsCard } from '../components/NotificationSettingsCard';
 import { PWAInstallButton } from '../components/PWAInstallButton';
+import { DeleteAccountModal } from '../components/Modals/DeleteAccountModal';
 import { applyTheme, getSavedTheme, ThemePreference } from '../utils/theme';
 import {
   SUPPORTED_TIMEZONES,
@@ -42,6 +45,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [themeFeedback, setThemeFeedback] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // Sync state if userProfile updates asynchronously from Firestore
   useEffect(() => {
@@ -292,26 +296,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Account Deletion Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-red-200 dark:border-red-950/60 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+      <div className="bg-red-50/40 dark:bg-red-950/20 rounded-2xl border-2 border-red-200 dark:border-red-900/60 p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-xs">
             <Trash2 className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">Eliminación de cuenta y datos</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Conocé el procedimiento y enviá la solicitud para borrar permanentemente tu usuario y registros.
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                Eliminar cuenta y datos
+              </h3>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                Zona de peligro
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+              Eliminá definitivamente tu cuenta y todos tus datos (perfil, cuentas bancarias, servicios, vencimientos, historial de pagos, ingresos, presupuestos, metas de ahorro y notificaciones). Esta acción es inmediata y no se puede deshacer.
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onOpenDeleteAccount}
-          className="self-start sm:self-auto px-4 py-2 rounded-lg border border-red-200 dark:border-red-900/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-xs font-semibold transition-colors shadow-xs active:scale-98 cursor-pointer"
-        >
-          Solicitar eliminación
-        </button>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-red-100 dark:border-red-900/40">
+          {onOpenDeleteAccount && (
+            <button
+              type="button"
+              onClick={onOpenDeleteAccount}
+              className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white underline underline-offset-4 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Solicitud por correo / Info legal Google Play</span>
+            </button>
+          )}
+          {!onOpenDeleteAccount && <div />}
+
+          <button
+            type="button"
+            onClick={() => setDeleteModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Eliminar mi cuenta ahora</span>
+          </button>
+        </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      <DeleteAccountModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onSuccess={() => {
+          setDeleteModalOpen(false);
+          // Redirect to home/login
+          if (typeof window !== 'undefined') {
+            window.location.href = '/';
+          }
+        }}
+      />
 
       {/* Logout Box */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 flex items-center justify-between">

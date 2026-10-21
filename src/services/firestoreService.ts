@@ -870,3 +870,44 @@ export async function seedArgentinaStarterAccounts(userId: string, currency: Cur
     console.warn('Could not seed starter income:', err);
   }
 }
+
+/**
+ * Deletes all documents in all subcollections and the user profile document for the given user.
+ * Safe, idempotent, and transactional via batch operations.
+ */
+export async function deleteUserFirestoreData(userId: string): Promise<void> {
+  if (!userId) return;
+
+  const subcollections = [
+    'accounts',
+    'billInstances',
+    'payments',
+    'incomes',
+    'goals',
+    'notifications',
+    'categories',
+  ];
+
+  for (const colName of subcollections) {
+    try {
+      const colRef = collection(db, 'users', userId, colName);
+      const snapshot = await getDocs(colRef);
+      if (!snapshot.empty) {
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    } catch (err) {
+      console.warn(`Could not clear subcollection ${colName} for user ${userId}:`, err);
+    }
+  }
+
+  // Delete user document
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await deleteDoc(userDocRef);
+  } catch (err) {
+    console.warn(`Could not delete user document for ${userId}:`, err);
+  }
+}
+

@@ -96,8 +96,33 @@ export const DeleteAccountView: React.FC<DeleteAccountViewProps> = ({
             Solicitud de Eliminación de Cuenta y Datos
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-            En cumplimiento de las normativas de privacidad y el derecho al olvido, podés solicitar la baja definitiva y la eliminación permanente e irreversible de tu cuenta de Cuenta Clara y de toda tu información asociada.
+            En cumplimiento de las normativas de privacidad y las políticas de Google Play, cualquier usuario puede solicitar o ejecutar la baja definitiva y la eliminación permanente de su cuenta y de toda su información asociada.
           </p>
+        </div>
+
+        {/* In-app Immediate Deletion Notice */}
+        <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-900/60 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm text-teal-950 dark:text-teal-200">
+                ¿Tenés acceso a tu cuenta en este dispositivo?
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/70 text-teal-800 dark:text-teal-300">
+                Inmediato
+              </span>
+            </div>
+            <p className="text-xs text-teal-800/90 dark:text-teal-300/90 leading-relaxed">
+              No necesitás enviar un correo ni aguardar plazos: podés eliminar tu cuenta al instante desde{' '}
+              <strong>Configuración → Eliminación de cuenta y datos</strong> confirmando tu identidad con tu contraseña o cuenta Google.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="self-start sm:self-auto px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold shrink-0 shadow-xs transition-all active:scale-95 cursor-pointer"
+          >
+            {user ? 'Ir a Configuración' : 'Iniciar sesión para borrar'}
+          </button>
         </div>
 
         {/* Action Card: Direct Mailto */}
