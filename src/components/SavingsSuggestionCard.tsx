@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Account, CurrencyCode, Income, SavingsGoal } from '../types';
 import { calculateMonthlyEquivalent, formatCurrency } from '../utils/formatters';
+import { calculateSplitBreakdown } from '../utils/splitExpenses';
 
 interface SavingsSuggestionCardProps {
   accounts: Account[];
@@ -58,9 +59,13 @@ export const SavingsSuggestionCard: React.FC<SavingsSuggestionCardProps> = ({
       .filter((a) => a.status === 'active')
       .reduce((sum, a) => {
         const fullMonthly = calculateMonthlyEquivalent(a.amount, a.frequency);
-        const myPortion = a.isShared
-          ? (fullMonthly * (a.mySharePercentage ?? 50)) / 100
-          : fullMonthly;
+        const myPortion = calculateSplitBreakdown(
+          fullMonthly,
+          a.isShared,
+          a.splitTotalPeople,
+          a.splitType,
+          a.mySharePercentage
+        ).myShareAmount;
         return sum + myPortion;
       }, 0);
   }, [accounts]);

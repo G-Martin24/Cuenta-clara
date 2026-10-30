@@ -31,6 +31,7 @@ import {
   calculateAnnualCost,
 } from '../utils/formatters';
 import { getDaysUntil } from '../utils/recurrence';
+import { calculateSplitBreakdown, getSplitBadgeText } from '../utils/splitExpenses';
 
 interface AccountsViewProps {
   accounts: Account[];
@@ -348,9 +349,9 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                         {acc.isShared && (
                           <span
                             className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
-                            title={`Dividida (${acc.mySharePercentage || 50}% tuyo)`}
+                            title={getSplitBadgeText(acc.isShared, acc.splitTotalPeople, acc.mySharePercentage, acc.splitType)}
                           >
-                            Dividida {acc.mySharePercentage || 50}%
+                            {getSplitBadgeText(acc.isShared, acc.splitTotalPeople, acc.mySharePercentage, acc.splitType)}
                           </span>
                         )}
                       </div>
@@ -394,7 +395,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                       </span>
                       {acc.isShared && (
                         <p className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">
-                          Tu parte: {formatCurrency((acc.amount * (acc.mySharePercentage || 50)) / 100, acc.currency)}
+                          Tu parte: {formatCurrency(calculateSplitBreakdown(acc.amount, true, acc.splitTotalPeople, acc.splitType, acc.mySharePercentage).myShareAmount, acc.currency)}
                         </p>
                       )}
                     </div>
@@ -549,8 +550,11 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                               </span>
                             )}
                             {acc.isShared && (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800">
-                                Dividida {acc.mySharePercentage || 50}%
+                              <span
+                                className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800"
+                                title={getSplitBadgeText(acc.isShared, acc.splitTotalPeople, acc.mySharePercentage, acc.splitType)}
+                              >
+                                {getSplitBadgeText(acc.isShared, acc.splitTotalPeople, acc.mySharePercentage, acc.splitType)}
                               </span>
                             )}
                           </div>

@@ -60,6 +60,7 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
           importScripts: ['/sw-notifications.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         },

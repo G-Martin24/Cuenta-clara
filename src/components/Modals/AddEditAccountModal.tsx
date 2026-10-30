@@ -23,6 +23,7 @@ import {
   DEFAULT_CATEGORIES,
   PAYMENT_METHODS,
 } from '../../types';
+import { calculateSplitBreakdown, cleanAccountSplitData } from '../../utils/splitExpenses';
 import {
   formatCurrency,
   calculateMonthlyEquivalent,
@@ -67,6 +68,7 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
   const [clientNumber, setClientNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [isShared, setIsShared] = useState(false);
+  const [splitType, setSplitType] = useState<'equal' | 'custom'>('equal');
   const [splitTotalPeople, setSplitTotalPeople] = useState<number>(2);
   const [mySharePercentage, setMySharePercentage] = useState<number>(50);
   const [splitNotes, setSplitNotes] = useState('');
@@ -92,9 +94,14 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
       setProviderUrl(accountToEdit.providerUrl || '');
       setClientNumber(accountToEdit.clientNumber || '');
       setNotes(accountToEdit.notes || '');
-      setIsShared(!!accountToEdit.isShared);
-      setSplitTotalPeople(accountToEdit.splitTotalPeople || 2);
-      setMySharePercentage(accountToEdit.mySharePercentage !== undefined ? accountToEdit.mySharePercentage : 50);
+      const shared = !!accountToEdit.isShared;
+      setIsShared(shared);
+      const count = Math.max(2, accountToEdit.splitTotalPeople || 2);
+      setSplitTotalPeople(count);
+      const initialSplitType = accountToEdit.splitType ||
+        (accountToEdit.mySharePercentage !== undefined && Math.abs(accountToEdit.mySharePercentage - (100 / count)) > 0.5 ? 'custom' : 'equal');
+      setSplitType(initialSplitType);
+      setMySharePercentage(accountToEdit.mySharePercentage !== undefined ? accountToEdit.mySharePercentage : Math.round((100 / count) * 100) / 100);
       setSplitNotes(accountToEdit.splitNotes || '');
     } else {
       const today = new Date();
@@ -118,6 +125,7 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
       setClientNumber('');
       setNotes('');
       setIsShared(false);
+      setSplitType('equal');
       setSplitTotalPeople(2);
       setMySharePercentage(50);
       setSplitNotes('');
@@ -139,8 +147,16 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
 
   // Preview calculations
   const numAmount = typeof amount === 'number' ? amount : 0;
-  const myPortionAmount = isShared ? (numAmount * mySharePercentage) / 100 : numAmount;
-  const otherPortionAmount = isShared ? numAmount - myPortionAmount : 0;
+  const splitBreakdown = calculateSplitBreakdown(
+    numAmount,
+    isShared,
+    splitTotalPeople,
+    splitType,
+    mySharePercentage
+  );
+  const myPortionAmount = splitBreakdown.myShareAmount;
+  const otherPortionAmount = splitBreakdown.othersShareAmount;
+  const perOtherAmount = splitBreakdown.perOtherShareAmount;
 
   const monthlyCost = calculateMonthlyEquivalent(myPortionAmount, frequency);
   const annualCost = calculateAnnualCost(myPortionAmount, frequency);
@@ -169,33 +185,35 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
 
     setSaving(true);
     try {
-      await onSave(
-        {
-          name: name.trim(),
-          provider: provider.trim(),
-          category,
-          amount,
-          currency,
-          amountType,
-          frequency,
-          nextDueDate,
-          dueDay,
-          paymentMethod,
-          autopay,
-          noticeDays,
-          providerUrl: providerUrl.trim(),
-          clientNumber: clientNumber.trim(),
-          notes: notes.trim(),
-          status: accountToEdit?.status || 'active',
-          color: '#0f766e',
-          icon: 'Receipt',
-          isShared,
-          splitTotalPeople: isShared ? splitTotalPeople : 1,
-          mySharePercentage: isShared ? mySharePercentage : 100,
-          splitNotes: isShared ? splitNotes.trim() : '',
-        },
-        updateFutureBills
-      );
+      const baseAccountData = {
+        name: name.trim(),
+        provider: provider.trim(),
+        category,
+        amount,
+        currency,
+        amountType,
+        frequency,
+        nextDueDate,
+        dueDay,
+        paymentMethod,
+        autopay,
+        noticeDays,
+        providerUrl: providerUrl.trim(),
+        clientNumber: clientNumber.trim(),
+        notes: notes.trim(),
+        status: accountToEdit?.status || 'active',
+        color: '#0f766e',
+        icon: 'Receipt',
+        isShared,
+        splitType: isShared ? splitType : 'equal',
+        splitTotalPeople: isShared ? splitTotalPeople : 1,
+        mySharePercentage: isShared ? (splitType === 'equal' ? Math.round((100 / splitTotalPeople) * 100) / 100 : mySharePercentage) : 100,
+        splitNotes: isShared ? splitNotes.trim() : '',
+        sharedWith: isShared ? splitNotes.trim() : '',
+      };
+
+      const cleanedData = cleanAccountSplitData(baseAccountData);
+      await onSave(cleanedData, updateFutureBills);
       onClose();
     } catch (err: any) {
       setError(err?.message || 'Error al guardar la cuenta. Intentá nuevamente.');
@@ -540,7 +558,41 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
               </label>
 
               {isShared && (
-                <div className="pt-2 border-t border-teal-200/60 dark:border-teal-800/40 space-y-2 animate-in fade-in duration-150">
+                <div className="pt-2 border-t border-teal-200/60 dark:border-teal-800/40 space-y-2.5 animate-in fade-in duration-150">
+                  {/* Mode switcher: En partes iguales vs Porcentaje personalizado */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                      Modo de división:
+                    </span>
+                    <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-100 dark:bg-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSplitType('equal');
+                          setMySharePercentage(Math.round((100 / splitTotalPeople) * 100) / 100);
+                        }}
+                        className={`px-2.5 py-0.5 text-xs font-semibold rounded-md transition-all ${
+                          splitType === 'equal'
+                            ? 'bg-teal-600 text-white shadow-2xs font-bold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        En partes iguales
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSplitType('custom')}
+                        className={`px-2.5 py-0.5 text-xs font-semibold rounded-md transition-all ${
+                          splitType === 'custom'
+                            ? 'bg-teal-600 text-white shadow-2xs font-bold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        Personalizado (%)
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
@@ -553,7 +605,9 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
                             type="button"
                             onClick={() => {
                               setSplitTotalPeople(count);
-                              setMySharePercentage(Math.round(100 / count));
+                              if (splitType === 'equal') {
+                                setMySharePercentage(Math.round((100 / count) * 100) / 100);
+                              }
                             }}
                             className={`flex-1 py-1 text-xs font-bold rounded border transition-colors ${
                               splitTotalPeople === count
@@ -567,22 +621,35 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
-                        Tu parte (%)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
-                          value={mySharePercentage}
-                          onChange={(e) => setMySharePercentage(parseFloat(e.target.value) || 0)}
-                          className="w-full px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold"
-                        />
-                        <span className="absolute right-2.5 top-1 text-[11px] text-slate-400 font-bold">%</span>
+                    {splitType === 'equal' ? (
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
+                          Participación por persona
+                        </label>
+                        <div className="px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-teal-800 dark:text-teal-300 text-xs font-bold">
+                          {splitTotalPeople === 2 && '50% cada uno (1/2)'}
+                          {splitTotalPeople === 3 && 'Exactamente 1/3 c/u (33,33%)'}
+                          {splitTotalPeople === 4 && '25% cada uno (1/4)'}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div>
+                        <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
+                          Tu parte (%)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={mySharePercentage}
+                            onChange={(e) => setMySharePercentage(parseFloat(e.target.value) || 0)}
+                            className="w-full px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold"
+                          />
+                          <span className="absolute right-2.5 top-1 text-[11px] text-slate-400 font-bold">%</span>
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-600 dark:text-slate-300 mb-0.5">
@@ -592,23 +659,38 @@ export const AddEditAccountModal: React.FC<AddEditAccountModalProps> = ({
                         type="text"
                         value={splitNotes}
                         onChange={(e) => setSplitNotes(e.target.value)}
-                        placeholder="Ej. Pareja, Roommate"
+                        placeholder="Ej. Pareja, Roommates"
                         className="w-full px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
                       />
                     </div>
                   </div>
 
-                  {/* Compact calculated tag */}
-                  <div className="flex flex-wrap items-center justify-between gap-1 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-teal-200/80 dark:border-teal-900 text-xs">
-                    <span className="text-slate-500">
-                      Total servicio: <strong className="text-slate-700 dark:text-slate-300">{formatCurrency(numAmount, currency)}</strong>
-                    </span>
-                    <span className="text-teal-700 dark:text-teal-300 font-bold">
-                      Tu pago ({mySharePercentage}%): {formatCurrency(myPortionAmount, currency)}
-                    </span>
-                    <span className="text-slate-600 dark:text-slate-400">
-                      A cobrar a otros ({100 - mySharePercentage}%): <strong>{formatCurrency(otherPortionAmount, currency)}</strong>
-                    </span>
+                  {/* Calculated breakdown details */}
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-teal-200/80 dark:border-teal-900 text-xs space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-1">
+                      <span className="text-slate-500">
+                        Total servicio:{' '}
+                        <strong className="text-slate-800 dark:text-slate-200">
+                          {formatCurrency(numAmount, currency)}
+                        </strong>
+                      </span>
+                      <span className="text-teal-700 dark:text-teal-300 font-bold">
+                        Tu pago: {formatCurrency(myPortionAmount, currency)}
+                        {splitType === 'equal' && splitTotalPeople === 3 ? ' (1/3)' : ` (${Math.round(splitBreakdown.mySharePercentage)}%)`}
+                      </span>
+                      <span className="text-slate-600 dark:text-slate-400">
+                        A cobrar a otros ({splitTotalPeople - 1} pers.):{' '}
+                        <strong>
+                          {formatCurrency(otherPortionAmount, currency)}
+                          {splitTotalPeople > 2 && splitType === 'equal' && ` (${formatCurrency(perOtherAmount, currency)} c/u)`}
+                        </strong>
+                      </span>
+                    </div>
+                    {numAmount > 0 && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 pt-0.5 border-t border-slate-100 dark:border-slate-800">
+                        ✓ Suma exacta de las partes: {formatCurrency(myPortionAmount + otherPortionAmount, currency)} (ajuste automático por redondeo de centavos)
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

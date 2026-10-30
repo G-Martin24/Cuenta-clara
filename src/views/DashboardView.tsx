@@ -34,6 +34,7 @@ import {
   calculateAnnualCost,
 } from '../utils/formatters';
 import { getDaysUntil } from '../utils/recurrence';
+import { calculateSplitBreakdown } from '../utils/splitExpenses';
 import { MonthlySplitModal } from '../components/Modals/MonthlySplitModal';
 import { SavingsSuggestionCard } from '../components/SavingsSuggestionCard';
 import { exportMonthlyReportToPdf } from '../services/pdfExportService';
@@ -231,10 +232,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         if (acc.isShared) {
           sharedCount++;
-          const myPct = acc.mySharePercentage ?? 50;
-          const myShareAmt = (m * myPct) / 100;
-          myPortion += myShareAmt;
-          othersPortion += (m - myShareAmt);
+          const sb = calculateSplitBreakdown(
+            m,
+            true,
+            acc.splitTotalPeople,
+            acc.splitType,
+            acc.mySharePercentage
+          );
+          myPortion += sb.myShareAmount;
+          othersPortion += sb.othersShareAmount;
         } else {
           myPortion += m;
         }

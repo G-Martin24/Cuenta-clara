@@ -70,6 +70,7 @@ import {
 } from './types';
 import { getDaysUntil } from './utils/recurrence';
 import { formatDateAr } from './utils/formatters';
+import { calculateSplitBreakdown, cleanAccountSplitData } from './utils/splitExpenses';
 
 const MainApp: React.FC = () => {
   const { user, userProfile, loading: authLoading, completeOnboarding, bypassLoading } = useAuth();
@@ -232,11 +233,60 @@ const MainApp: React.FC = () => {
     updateFutureBills = true
   ) => {
     if (!user) return;
+    const cleaned = cleanAccountSplitData(accountData);
+
     if (accountToEdit) {
-      await updateAccount(user.uid, accountToEdit.id, accountData, updateFutureBills);
+      const updatedAccount: Account = {
+        ...accountToEdit,
+        ...cleaned,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Optimistic update of accounts in local state for instantaneous UI response
+      setAccounts((prev) =>
+        prev.map((a) => (a.id === accountToEdit.id ? updatedAccount : a))
+      );
+
+      // Optimistic update of associated bills in local state
+      setBills((prev) =>
+        prev.map((b) => {
+          if (b.accountId === accountToEdit.id && (b.status === 'pending' || b.status === 'upcoming')) {
+            const billAmount = cleaned.amount !== undefined ? cleaned.amount : b.estimatedAmount;
+            const isShared = !!cleaned.isShared;
+            const splitPeople = isShared ? (cleaned.splitTotalPeople || 2) : 1;
+            const splitType = cleaned.splitType || 'equal';
+            const sb = calculateSplitBreakdown(
+              billAmount,
+              isShared,
+              splitPeople,
+              splitType,
+              cleaned.mySharePercentage
+            );
+            return {
+              ...b,
+              accountName: cleaned.name,
+              category: cleaned.category,
+              currency: cleaned.currency,
+              estimatedAmount: billAmount,
+              isShared,
+              splitType,
+              splitTotalPeople: splitPeople,
+              mySharePercentage: sb.mySharePercentage,
+              myShareAmount: sb.myShareAmount,
+              splitNotes: isShared ? (cleaned.splitNotes || '') : '',
+              sharedWith: isShared ? (cleaned.sharedWith || '') : '',
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return b;
+        })
+      );
+
+      await updateAccount(user.uid, accountToEdit.id, cleaned, updateFutureBills);
       showToast(`Cuenta "${accountData.name}" actualizada con éxito.`);
     } else {
-      await createAccountWithBills(user.uid, accountData);
+      const created = await createAccountWithBills(user.uid, cleaned);
+      setAccounts((prev) => [...prev, created]);
       showToast(`Cuenta "${accountData.name}" creada con su vencimiento.`);
     }
     setAccountToEdit(null);
@@ -352,15 +402,22 @@ const MainApp: React.FC = () => {
   }) => {
     if (!user) return;
     if (billToEdit) {
+      const sb = calculateSplitBreakdown(
+        billData.amount,
+        billData.isShared,
+        billData.splitTotalPeople,
+        undefined,
+        billData.mySharePercentage
+      );
       await updateBillInstance(user.uid, billToEdit.id, {
         estimatedAmount: billData.amount,
         dueDate: billData.dueDate,
         currency: billData.currency,
         notes: billData.notes,
         isShared: billData.isShared,
-        splitTotalPeople: billData.splitTotalPeople,
-        mySharePercentage: billData.mySharePercentage,
-        myShareAmount: billData.isShared ? (billData.amount * (billData.mySharePercentage || 50)) / 100 : billData.amount,
+        splitTotalPeople: billData.isShared ? (billData.splitTotalPeople || 2) : 1,
+        mySharePercentage: billData.isShared ? (billData.mySharePercentage || 50) : 100,
+        myShareAmount: sb.myShareAmount,
       });
       showToast(`Vencimiento de "${billData.accountName}" actualizado.`);
     } else {

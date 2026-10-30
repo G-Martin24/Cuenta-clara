@@ -121,9 +121,12 @@ export interface Account {
   previousAmount?: number;
   // Split bill fields
   isShared?: boolean;
+  splitType?: 'equal' | 'custom';
   splitTotalPeople?: number; // e.g. 2, 3, etc.
   mySharePercentage?: number; // e.g. 50
   splitNotes?: string; // e.g. "Dividido con mi pareja"
+  sharedWith?: string;
+  participants?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -145,11 +148,14 @@ export interface BillInstance {
   notes?: string;
   // Split bill fields
   isShared?: boolean;
+  splitType?: 'equal' | 'custom';
   splitTotalPeople?: number;
   mySharePercentage?: number;
   myShareAmount?: number;
   splitCollected?: boolean; // If other person's share was already collected
   splitNotes?: string;
+  sharedWith?: string;
+  participants?: string[];
   // Postpone / Crunch tracking
   postponedFrom?: string; // Original due date YYYY-MM-DD if postponed
   postponeReason?: string;

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Account, CurrencyCode } from '../../types';
 import { formatCurrency, calculateMonthlyEquivalent } from '../../utils/formatters';
+import { calculateSplitBreakdown } from '../../utils/splitExpenses';
 
 interface MonthlySplitModalProps {
   isOpen: boolean;
@@ -70,73 +71,74 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
 
     const items = filteredAccounts.map((acc) => {
       const monthlyAmount = calculateMonthlyEquivalent(acc.amount, acc.frequency);
-      total += monthlyAmount;
+      total = Math.round((total + monthlyAmount) * 100) / 100;
 
       let p1 = 0;
       let p2 = 0;
       let p3 = 0;
       let p4 = 0;
-      let shareP1Pct = 50;
-      let shareP2Pct = 50;
+      let shareP1Pct = 100;
+      let shareP2Pct = 0;
       let shareP3Pct = 0;
       let shareP4Pct = 0;
       let modeNote = '';
 
       if (splitMode === 'split2') {
-        shareP1Pct = 50;
-        shareP2Pct = 50;
-        p1 = monthlyAmount * 0.5;
-        p2 = monthlyAmount * 0.5;
-        modeNote = '50% c/u';
+        const sb = calculateSplitBreakdown(monthlyAmount, true, 2, 'equal');
+        p1 = sb.shares[0];
+        p2 = sb.shares[1];
+        shareP1Pct = sb.percentages[0];
+        shareP2Pct = sb.percentages[1];
+        modeNote = 'Partes iguales (50% c/u)';
       } else if (splitMode === 'split3') {
-        shareP1Pct = 33.34;
-        shareP2Pct = 33.33;
-        shareP3Pct = 33.33;
-        p1 = monthlyAmount / 3;
-        p2 = monthlyAmount / 3;
-        p3 = monthlyAmount / 3;
-        modeNote = '1/3 c/u (33.3%)';
+        const sb = calculateSplitBreakdown(monthlyAmount, true, 3, 'equal');
+        p1 = sb.shares[0];
+        p2 = sb.shares[1];
+        p3 = sb.shares[2];
+        shareP1Pct = sb.percentages[0];
+        shareP2Pct = sb.percentages[1];
+        shareP3Pct = sb.percentages[2];
+        modeNote = 'Partes iguales (1/3 c/u - 33,33%)';
       } else if (splitMode === 'split4') {
-        shareP1Pct = 25;
-        shareP2Pct = 25;
-        shareP3Pct = 25;
-        shareP4Pct = 25;
-        p1 = monthlyAmount * 0.25;
-        p2 = monthlyAmount * 0.25;
-        p3 = monthlyAmount * 0.25;
-        p4 = monthlyAmount * 0.25;
-        modeNote = '25% c/u';
+        const sb = calculateSplitBreakdown(monthlyAmount, true, 4, 'equal');
+        p1 = sb.shares[0];
+        p2 = sb.shares[1];
+        p3 = sb.shares[2];
+        p4 = sb.shares[3];
+        shareP1Pct = sb.percentages[0];
+        shareP2Pct = sb.percentages[1];
+        shareP3Pct = sb.percentages[2];
+        shareP4Pct = sb.percentages[3];
+        modeNote = 'Partes iguales (25% c/u)';
       } else {
         // 'configured' mode: respects each account's setup
         if (acc.isShared) {
-          const count = acc.splitTotalPeople || 2;
-          const myPct = acc.mySharePercentage ?? 50;
-          shareP1Pct = myPct;
-          p1 = (monthlyAmount * myPct) / 100;
+          const count = Math.max(2, acc.splitTotalPeople || 2);
+          const splitType = acc.splitType || (acc.mySharePercentage !== undefined && Math.abs(acc.mySharePercentage - (100 / count)) > 0.5 ? 'custom' : 'equal');
+          const sb = calculateSplitBreakdown(monthlyAmount, true, count, splitType, acc.mySharePercentage);
 
-          const othersPct = Math.max(0, 100 - myPct);
-          const othersCount = Math.max(1, count - 1);
-          const perOtherPct = othersPct / othersCount;
-          const perOtherAmt = (monthlyAmount * othersPct) / 100 / othersCount;
+          p1 = sb.shares[0] || 0;
+          p2 = sb.shares[1] || 0;
+          p3 = sb.shares[2] || 0;
+          p4 = sb.shares[3] || 0;
+          shareP1Pct = sb.percentages[0] || (100 / count);
+          shareP2Pct = sb.percentages[1] || (100 / count);
+          shareP3Pct = sb.percentages[2] || (100 / count);
+          shareP4Pct = sb.percentages[3] || (100 / count);
 
-          if (count === 2) {
-            shareP2Pct = perOtherPct;
-            p2 = perOtherAmt;
-            modeNote = `Compartida (${myPct}% tú / ${othersPct}% ${acc.splitNotes || person2Name})`;
-          } else if (count === 3) {
-            shareP2Pct = perOtherPct;
-            shareP3Pct = perOtherPct;
-            p2 = perOtherAmt;
-            p3 = perOtherAmt;
-            modeNote = `Dividida entre 3 (${myPct}% tú / ${perOtherPct.toFixed(1)}% c/u otros)`;
+          if (splitType === 'equal') {
+            const displayPct = count === 3 ? '33,33%' : `${(100 / count).toFixed(count === 2 ? 0 : 1)}%`;
+            if (count === 2) {
+              modeNote = `Dividida en 2 partes iguales (${displayPct} c/u)`;
+            } else if (count === 3) {
+              modeNote = `Dividida en 3 partes iguales (1/3 c/u - ${displayPct})`;
+            } else {
+              modeNote = `Dividida en ${count} partes iguales (${displayPct} c/u)`;
+            }
           } else {
-            shareP2Pct = perOtherPct;
-            shareP3Pct = perOtherPct;
-            shareP4Pct = perOtherPct;
-            p2 = perOtherAmt;
-            p3 = perOtherAmt;
-            p4 = perOtherAmt;
-            modeNote = `Dividida entre 4 (${myPct}% tú / ${perOtherPct.toFixed(1)}% c/u otros)`;
+            const myPctDisplay = Math.round(sb.mySharePercentage);
+            const othersPctDisplay = Math.round(100 - sb.mySharePercentage);
+            modeNote = `Dividida personalizada (${myPctDisplay}% tú / ${othersPctDisplay}% otros)`;
           }
         } else {
           // 100% individual
@@ -147,10 +149,10 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
         }
       }
 
-      p1Total += p1;
-      p2Total += p2;
-      p3Total += p3;
-      p4Total += p4;
+      p1Total = Math.round((p1Total + p1) * 100) / 100;
+      p2Total = Math.round((p2Total + p2) * 100) / 100;
+      p3Total = Math.round((p3Total + p3) * 100) / 100;
+      p4Total = Math.round((p4Total + p4) * 100) / 100;
 
       return {
         account: acc,
@@ -177,7 +179,7 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
         p4: p4Total,
       },
     };
-  }, [filteredAccounts, splitMode, person2Name]);
+  }, [filteredAccounts, splitMode]);
 
   const activePeopleCount = useMemo(() => {
     if (splitMode === 'split2') return 2;

@@ -22,6 +22,7 @@ import {
   CurrencyCode,
 } from '../types';
 import { generateNextDates } from '../utils/recurrence';
+import { calculateSplitBreakdown, cleanAccountSplitData } from '../utils/splitExpenses';
 
 // Helper to create random valid ID
 export function generateId(prefix = 'id'): string {
@@ -76,13 +77,14 @@ export async function createAccountWithBills(
   const accountId = generateId('acc');
   const now = new Date().toISOString();
 
+  const cleanedData = cleanAccountSplitData(accountData);
   const fullAccount: Account = {
-    ...accountData,
+    ...cleanedData,
     id: accountId,
     userId,
     createdAt: now,
     updatedAt: now,
-    lastAmount: accountData.amount,
+    lastAmount: cleanedData.amount,
   };
 
   const accountPath = `users/${userId}/accounts/${accountId}`;
@@ -93,30 +95,39 @@ export async function createAccountWithBills(
 
   // 2. Only create the single initial bill instance that the user is actually adding
   // No auto-generation of future speculative months with outdated/variable amounts
-  const startDate = accountData.nextDueDate || accountData.startDate || new Date().toISOString().split('T')[0];
-  const isShared = !!accountData.isShared;
-  const splitPeople = accountData.splitTotalPeople || (isShared ? 2 : 1);
-  const myPct = accountData.mySharePercentage !== undefined ? accountData.mySharePercentage : (isShared ? Math.round(100 / splitPeople) : 100);
-  const myShareAmount = isShared ? (accountData.amount * myPct) / 100 : accountData.amount;
+  const startDate = cleanedData.nextDueDate || cleanedData.startDate || new Date().toISOString().split('T')[0];
+  const isShared = !!cleanedData.isShared;
+  const splitPeople = cleanedData.splitTotalPeople || (isShared ? 2 : 1);
+  const splitType = cleanedData.splitType || 'equal';
+
+  const sb = calculateSplitBreakdown(
+    cleanedData.amount,
+    isShared,
+    splitPeople,
+    splitType,
+    cleanedData.mySharePercentage
+  );
 
   const billId = generateId('bill');
   const bill: BillInstance = {
     id: billId,
     userId,
     accountId,
-    accountName: accountData.name,
-    category: accountData.category,
+    accountName: cleanedData.name,
+    category: cleanedData.category,
     dueDate: startDate,
-    estimatedAmount: accountData.amount,
-    currency: accountData.currency,
+    estimatedAmount: cleanedData.amount,
+    currency: cleanedData.currency,
     status: 'pending',
-    notes: accountData.notes || '',
+    notes: cleanedData.notes || '',
     isShared,
-    splitTotalPeople: splitPeople,
-    mySharePercentage: myPct,
-    myShareAmount,
+    splitType,
+    splitTotalPeople: isShared ? splitPeople : 1,
+    mySharePercentage: sb.mySharePercentage,
+    myShareAmount: sb.myShareAmount,
     splitCollected: false,
-    splitNotes: accountData.splitNotes || '',
+    splitNotes: cleanedData.splitNotes || '',
+    sharedWith: cleanedData.sharedWith || '',
     createdAt: now,
     updatedAt: now,
   };
@@ -134,17 +145,28 @@ export async function updateAccount(
   userId: string,
   accountId: string,
   updates: Partial<Account>,
-  updateFutureBills = false
+  updateFutureBills = true
 ): Promise<void> {
   const path = `users/${userId}/accounts/${accountId}`;
   const now = new Date().toISOString();
   try {
+    const cleanedUpdates = cleanAccountSplitData(updates);
+
     await updateDoc(doc(db, 'users', userId, 'accounts', accountId), {
-      ...updates,
+      ...cleanedUpdates,
       updatedAt: now,
     });
 
-    if (updateFutureBills && (updates.amount !== undefined || updates.name !== undefined || updates.category !== undefined)) {
+    const shouldUpdateBills =
+      updateFutureBills ||
+      cleanedUpdates.isShared !== undefined ||
+      cleanedUpdates.splitTotalPeople !== undefined ||
+      cleanedUpdates.mySharePercentage !== undefined ||
+      cleanedUpdates.amount !== undefined ||
+      cleanedUpdates.name !== undefined ||
+      cleanedUpdates.category !== undefined;
+
+    if (shouldUpdateBills) {
       // Update pending & upcoming bill instances
       const billsRef = collection(db, 'users', userId, 'billInstances');
       const q = query(billsRef, where('accountId', '==', accountId));
@@ -155,10 +177,39 @@ export async function updateAccount(
         const bill = d.data() as BillInstance;
         if (bill.status === 'upcoming' || bill.status === 'pending') {
           const patch: Partial<BillInstance> = { updatedAt: now };
-          if (updates.amount !== undefined) patch.estimatedAmount = updates.amount;
-          if (updates.name !== undefined) patch.accountName = updates.name;
-          if (updates.category !== undefined) patch.category = updates.category;
-          if (updates.currency !== undefined) patch.currency = updates.currency;
+          if (cleanedUpdates.amount !== undefined) patch.estimatedAmount = cleanedUpdates.amount;
+          if (cleanedUpdates.name !== undefined) patch.accountName = cleanedUpdates.name;
+          if (cleanedUpdates.category !== undefined) patch.category = cleanedUpdates.category;
+          if (cleanedUpdates.currency !== undefined) patch.currency = cleanedUpdates.currency;
+
+          const isShared = cleanedUpdates.isShared !== undefined ? cleanedUpdates.isShared : !!bill.isShared;
+          patch.isShared = isShared;
+
+          if (isShared) {
+            const splitPeople = cleanedUpdates.splitTotalPeople || bill.splitTotalPeople || 2;
+            const splitType = cleanedUpdates.splitType || bill.splitType || 'equal';
+            const myPct = cleanedUpdates.mySharePercentage !== undefined ? cleanedUpdates.mySharePercentage : bill.mySharePercentage;
+
+            patch.splitType = splitType;
+            patch.splitTotalPeople = splitPeople;
+            patch.mySharePercentage = myPct;
+            patch.splitNotes = cleanedUpdates.splitNotes !== undefined ? cleanedUpdates.splitNotes : (bill.splitNotes || '');
+            patch.sharedWith = cleanedUpdates.sharedWith !== undefined ? cleanedUpdates.sharedWith : (bill.sharedWith || '');
+
+            const billAmount = patch.estimatedAmount !== undefined ? patch.estimatedAmount : bill.estimatedAmount;
+            const sb = calculateSplitBreakdown(billAmount, true, splitPeople, splitType, myPct);
+            patch.myShareAmount = sb.myShareAmount;
+          } else {
+            // Clean split fields from bill when not shared
+            patch.splitType = 'equal';
+            patch.splitTotalPeople = 1;
+            patch.mySharePercentage = 100;
+            patch.myShareAmount = patch.estimatedAmount !== undefined ? patch.estimatedAmount : bill.estimatedAmount;
+            patch.splitNotes = '';
+            patch.sharedWith = '';
+            patch.participants = [];
+          }
+
           batch.update(d.ref, patch);
         }
       });
@@ -233,8 +284,10 @@ export async function createBillInstance(
     currency: CurrencyCode;
     notes?: string;
     isShared?: boolean;
+    splitType?: 'equal' | 'custom';
     splitTotalPeople?: number;
     mySharePercentage?: number;
+    sharedWith?: string;
   }
 ): Promise<BillInstance> {
   const billId = generateId('bill');
@@ -243,8 +296,14 @@ export async function createBillInstance(
 
   const isShared = !!billData.isShared;
   const splitPeople = billData.splitTotalPeople || (isShared ? 2 : 1);
-  const myPct = billData.mySharePercentage !== undefined ? billData.mySharePercentage : (isShared ? Math.round(100 / splitPeople) : 100);
-  const myShareAmount = isShared ? (billData.amount * myPct) / 100 : billData.amount;
+  const splitType = billData.splitType || (billData.mySharePercentage !== undefined && Math.abs(billData.mySharePercentage - (100 / splitPeople)) > 0.05 ? 'custom' : 'equal');
+  const sb = calculateSplitBreakdown(
+    billData.amount,
+    isShared,
+    splitPeople,
+    splitType,
+    billData.mySharePercentage
+  );
 
   const bill: BillInstance = {
     id: billId,
@@ -258,10 +317,12 @@ export async function createBillInstance(
     status: 'pending',
     notes: billData.notes || '',
     isShared,
-    splitTotalPeople: splitPeople,
-    mySharePercentage: myPct,
-    myShareAmount,
+    splitType: isShared ? splitType : 'equal',
+    splitTotalPeople: isShared ? splitPeople : 1,
+    mySharePercentage: sb.mySharePercentage,
+    myShareAmount: sb.myShareAmount,
     splitCollected: false,
+    sharedWith: isShared ? billData.sharedWith : undefined,
     createdAt: now,
     updatedAt: now,
   };

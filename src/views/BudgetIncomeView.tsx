@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Account, BillInstance, CurrencyCode, Income, SavingsGoal } from '../types';
 import { formatCurrency, calculateMonthlyEquivalent, formatDateAr } from '../utils/formatters';
+import { calculateSplitBreakdown, getSplitBadgeText } from '../utils/splitExpenses';
 
 interface BudgetIncomeViewProps {
   incomes: Income[];
@@ -65,10 +66,14 @@ export const BudgetIncomeView: React.FC<BudgetIncomeViewProps> = ({
       .filter((a) => a.status === 'active')
       .reduce((sum, a) => {
         const fullMonthly = calculateMonthlyEquivalent(a.amount, a.frequency);
-        const myPortion = a.isShared
-          ? (fullMonthly * (a.mySharePercentage ?? 50)) / 100
-          : fullMonthly;
-        return sum + myPortion;
+        const sb = calculateSplitBreakdown(
+          fullMonthly,
+          !!a.isShared,
+          a.splitTotalPeople,
+          a.splitType,
+          a.mySharePercentage
+        );
+        return sum + sb.myShareAmount;
       }, 0);
   }, [accounts]);
 
@@ -401,9 +406,19 @@ export const BudgetIncomeView: React.FC<BudgetIncomeViewProps> = ({
               <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
                 {sharedMonthBills.map((b) => {
                   const totalAmt = b.actualAmount ?? b.estimatedAmount;
-                  const myPct = b.mySharePercentage ?? 50;
-                  const myPart = (totalAmt * myPct) / 100;
-                  const othersPart = totalAmt - myPart;
+                  const count = Math.max(2, b.splitTotalPeople || 2);
+                  const sb = calculateSplitBreakdown(
+                    totalAmt,
+                    true,
+                    count,
+                    b.splitType || 'equal',
+                    b.mySharePercentage
+                  );
+                  const myPart = b.myShareAmount !== undefined && b.actualAmount === undefined
+                    ? b.myShareAmount
+                    : sb.myShareAmount;
+                  const othersPart = Math.round((totalAmt - myPart) * 100) / 100;
+                  const badgeText = getSplitBadgeText(true, count, b.mySharePercentage, b.splitType);
 
                   return (
                     <div
@@ -416,14 +431,14 @@ export const BudgetIncomeView: React.FC<BudgetIncomeViewProps> = ({
                             {b.accountName}
                           </h4>
                           <span className="text-[10px] font-semibold bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 px-2 py-0.5 rounded-full">
-                            Dividido ({myPct}% tuyo / {100 - myPct}% de otros)
+                            {badgeText}
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Vencimiento: {formatDateAr(b.dueDate)}{' '}
                           {b.splitNotes && `• ${b.splitNotes}`}
                         </p>
-                        <div className="mt-2 flex items-center gap-4 text-xs">
+                        <div className="mt-2 flex flex-wrap items-center gap-4 text-xs">
                           <span className="text-slate-500">
                             Total factura:{' '}
                             <strong className="text-slate-800 dark:text-slate-200">
@@ -434,7 +449,8 @@ export const BudgetIncomeView: React.FC<BudgetIncomeViewProps> = ({
                             Tu parte: {formatCurrency(myPart, b.currency)}
                           </span>
                           <span className="text-slate-600 dark:text-slate-300">
-                            A cobrar de otros: {formatCurrency(othersPart, b.currency)}
+                            A cobrar de otros ({count - 1} pers.): {formatCurrency(othersPart, b.currency)}
+                            {count > 2 && sb.isEqual && ` (${formatCurrency(sb.perOtherShareAmount, b.currency)} c/u)`}
                           </span>
                         </div>
                       </div>

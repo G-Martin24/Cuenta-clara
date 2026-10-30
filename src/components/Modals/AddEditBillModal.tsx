@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Account, BillInstance, CurrencyCode, SUPPORTED_CURRENCIES } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
+import { calculateSplitBreakdown } from '../../utils/splitExpenses';
 
 interface AddEditBillModalProps {
   isOpen: boolean;
@@ -357,11 +358,25 @@ export const AddEditBillModal: React.FC<AddEditBillModalProps> = ({
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                   />
                 </div>
-                {typeof amount === 'number' && amount > 0 && (
-                  <div className="col-span-2 text-[11px] text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 p-2 rounded-md">
-                    Tu parte a pagar: <strong>{formatCurrency((amount * myPct) / 100, currency)}</strong> (el resto: {formatCurrency(amount - (amount * myPct) / 100, currency)})
-                  </div>
-                )}
+                {typeof amount === 'number' && amount > 0 && (() => {
+                  const sb = calculateSplitBreakdown(
+                    amount,
+                    true,
+                    splitPeople,
+                    Math.abs(myPct - (100 / splitPeople)) < 0.6 ? 'equal' : 'custom',
+                    myPct
+                  );
+                  return (
+                    <div className="col-span-2 text-[11px] text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 p-2 rounded-md space-y-0.5">
+                      <div>
+                        Tu parte a pagar: <strong>{formatCurrency(sb.myShareAmount, currency)}</strong> (a cobrar al resto: {formatCurrency(sb.othersShareAmount, currency)})
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        ✓ Total exacto de las partes: {formatCurrency(sb.myShareAmount + sb.othersShareAmount, currency)}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

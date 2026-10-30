@@ -62,9 +62,12 @@ service cloud.firestore {
         (!('noticeDays' in data) || (data.noticeDays is number && data.noticeDays >= 0)) &&
         (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
         (!('isShared' in data) || data.isShared is bool) &&
+        (!('splitType' in data) || data.splitType in ['equal', 'custom']) &&
         (!('splitTotalPeople' in data) || (data.splitTotalPeople is number && data.splitTotalPeople >= 1)) &&
         (!('mySharePercentage' in data) || (data.mySharePercentage is number && data.mySharePercentage >= 0 && data.mySharePercentage <= 100)) &&
-        (!('splitNotes' in data) || (data.splitNotes is string && data.splitNotes.size() <= 500));
+        (!('splitNotes' in data) || (data.splitNotes is string && data.splitNotes.size() <= 500)) &&
+        (!('sharedWith' in data) || (data.sharedWith is string && data.sharedWith.size() <= 500)) &&
+        (!('participants' in data) || (data.participants is list));
     }
 
     // Validation for BillInstance
@@ -84,11 +87,14 @@ service cloud.firestore {
         (!('receiptNumber' in data) || (data.receiptNumber is string && data.receiptNumber.size() <= 128)) &&
         (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
         (!('isShared' in data) || data.isShared is bool) &&
+        (!('splitType' in data) || data.splitType in ['equal', 'custom']) &&
         (!('splitTotalPeople' in data) || (data.splitTotalPeople is number && data.splitTotalPeople >= 1)) &&
         (!('mySharePercentage' in data) || (data.mySharePercentage is number && data.mySharePercentage >= 0 && data.mySharePercentage <= 100)) &&
         (!('myShareAmount' in data) || (data.myShareAmount is number && data.myShareAmount >= 0)) &&
         (!('splitCollected' in data) || data.splitCollected is bool) &&
-        (!('splitNotes' in data) || (data.splitNotes is string && data.splitNotes.size() <= 500));
+        (!('splitNotes' in data) || (data.splitNotes is string && data.splitNotes.size() <= 500)) &&
+        (!('sharedWith' in data) || (data.sharedWith is string && data.sharedWith.size() <= 500)) &&
+        (!('participants' in data) || (data.participants is list));
     }
 
     // Validation for Payment
