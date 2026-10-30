@@ -44,9 +44,17 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
   const [person4Name, setPerson4Name] = useState('Persona 4');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
-  // Only consider active accounts
+  // Only consider active accounts and strictly enforce unique account.id (one row per real account)
   const activeAccounts = useMemo(() => {
-    return accounts.filter((a) => a.status === 'active');
+    const map = new Map<string, Account>();
+    accounts.forEach((a) => {
+      if (a && a.id && a.status === 'active') {
+        if (!map.has(a.id)) {
+          map.set(a.id, a);
+        }
+      }
+    });
+    return Array.from(map.values());
   }, [accounts]);
 
   // Unique categories for filtering
@@ -266,8 +274,11 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopySummary}
+              disabled={activeAccounts.length === 0}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs ${
-                copied
+                activeAccounts.length === 0
+                  ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700'
+                  : copied
                   ? 'bg-emerald-600 text-white'
                   : 'bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800'
               }`}
@@ -507,7 +518,9 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
 
             {breakdown.length === 0 ? (
               <div className="p-8 text-center text-xs text-slate-400">
-                No hay servicios activos en esta categoría.
+                {activeAccounts.length === 0
+                  ? 'No hay servicios ni cuentas activas registradas.'
+                  : 'No hay servicios activos en esta categoría.'}
               </div>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800/70 bg-white dark:bg-slate-900">
@@ -610,7 +623,8 @@ export const MonthlySplitModal: React.FC<MonthlySplitModalProps> = ({
             <button
               type="button"
               onClick={handleCopySummary}
-              className="px-4 py-2 text-xs font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white shadow-xs transition-colors flex items-center gap-1.5"
+              disabled={breakdown.length === 0}
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white shadow-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
               <span>{copied ? '¡Texto copiado!' : 'Copiar desglose completo'}</span>

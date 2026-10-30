@@ -175,10 +175,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return '¡Buenas noches';
   }, []);
 
-  // Filter bills for the selected month (excluding speculative upcoming ones)
+  const validAccountIds = useMemo(() => new Set(accounts.map((a) => a.id)), [accounts]);
+
+  // Filter bills for the selected month (excluding speculative upcoming ones and orphaned bills)
   const monthBills = useMemo(() => {
-    return bills.filter((b) => b.dueDate.startsWith(selectedMonth) && b.status !== 'upcoming');
-  }, [bills, selectedMonth]);
+    return bills.filter(
+      (b) =>
+        b.dueDate.startsWith(selectedMonth) &&
+        b.status !== 'upcoming' &&
+        validAccountIds.has(b.accountId)
+    );
+  }, [bills, selectedMonth, validAccountIds]);
 
   // Key totals for selected month
   const { totalEstimated, totalPaid, totalPending, totalOverdue } = useMemo(() => {
@@ -259,6 +266,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Dynamic share based on selected mode on the card
   const { displayedMyShare, displayedOtherShare, splitSubtitle } = useMemo(() => {
+    if (activeAccountsCount === 0 || totalMonthlyEquivalent === 0) {
+      return {
+        displayedMyShare: 0,
+        displayedOtherShare: 0,
+        splitSubtitle: 'No hay cuentas activas registradas',
+      };
+    }
     if (cardSplitMode === 'split2') {
       const half = totalMonthlyEquivalent * 0.5;
       return {
@@ -284,6 +298,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           : 'Según la configuración individual de cada servicio',
     };
   }, [
+    activeAccountsCount,
     cardSplitMode,
     totalMonthlyEquivalent,
     myConfiguredMonthlyPortion,
@@ -294,26 +309,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Urgent upcoming bills (only real pending & overdue bills that the user added)
   const upcomingBills = useMemo(() => {
     return bills
-      .filter((b) => b.status === 'pending' || b.status === 'overdue')
+      .filter((b) => (b.status === 'pending' || b.status === 'overdue') && validAccountIds.has(b.accountId))
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  }, [bills]);
+  }, [bills, validAccountIds]);
 
   // Paid bills in the selected month
   const paidBillsThisMonth = useMemo(() => {
     return bills
-      .filter((b) => b.status === 'paid' && b.dueDate.startsWith(selectedMonth))
+      .filter((b) => b.status === 'paid' && b.dueDate.startsWith(selectedMonth) && validAccountIds.has(b.accountId))
       .sort((a, b) => (b.paidDate || b.dueDate).localeCompare(a.paidDate || a.dueDate));
-  }, [bills, selectedMonth]);
+  }, [bills, selectedMonth, validAccountIds]);
 
   // Overdue bills (any bills past due not paid)
   const overdueBills = useMemo(() => {
     return bills
       .filter((b) => {
         if (b.status === 'paid' || b.status === 'skipped' || b.status === 'cancelled') return false;
+        if (!validAccountIds.has(b.accountId)) return false;
         return getDaysUntil(b.dueDate) < 0 || b.status === 'overdue';
       })
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  }, [bills]);
+  }, [bills, validAccountIds]);
 
   // Category breakdown for selected month
   const categoryStats = useMemo(() => {
@@ -406,75 +422,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
-  // Empty state handling
-  if (accounts.length === 0) {
-    return (
-      <div className="py-12 px-4 max-w-3xl mx-auto text-center">
-        <div className="w-16 h-16 rounded-2xl bg-teal-100 dark:bg-teal-950/60 text-teal-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
-          <Sparkles className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-          {greeting}, {userName}! Te damos la bienvenida a Cuenta Clara.
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md mx-auto leading-relaxed">
-          Todavía no tenés ningún servicio o cuenta registrada. Podés cargar ejemplos reales de servicios de Argentina con un click o crear tu primera cuenta a mano.
-        </p>
-
-        <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button
-            onClick={async () => {
-              setLoadingSeed(true);
-              try {
-                await onSeedStarterData();
-              } finally {
-                setLoadingSeed(false);
-              }
-            }}
-            disabled={loadingSeed}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>{loadingSeed ? 'Cargando ejemplos...' : 'Cargar servicios típicos de Argentina'}</span>
-          </button>
-
-          <button
-            onClick={onOpenAddAccount}
-            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Agregar mi primera cuenta</span>
-          </button>
-        </div>
-
-        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <Clock className="w-5 h-5 text-amber-500 mb-2" />
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Avisos a tiempo</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Sabé qué pagos vencen esta semana y evitá recargos o cortes.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <TrendingUp className="w-5 h-5 text-teal-600 mb-2" />
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Alertas de aumentos</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Detección automática de subas de más del 15% en tarifas y abonos.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <CreditCard className="w-5 h-5 text-blue-500 mb-2" />
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Previsión anual</h4>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Calculá tus gastos fijos y reservá para pagos anuales y patentes.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {/* Empty State Banner when no accounts exist */}
+      {accounts.length === 0 && (
+        <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-teal-500/10 via-teal-500/5 to-transparent border border-teal-200 dark:border-teal-800 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  {greeting}, {userName}! Te damos la bienvenida a Cuenta Clara.
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-xl leading-relaxed">
+                  Todavía no tenés ningún servicio o cuenta registrada. Podés cargar ejemplos reales de servicios de Argentina con un click o crear tu primera cuenta a mano.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoadingSeed(true);
+                  try {
+                    await onSeedStarterData();
+                  } finally {
+                    setLoadingSeed(false);
+                  }
+                }}
+                disabled={loadingSeed}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{loadingSeed ? 'Cargando ejemplos...' : 'Cargar servicios típicos'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenAddAccount}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nueva cuenta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Top Banner / Month Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>

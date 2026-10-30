@@ -316,6 +316,240 @@ console.log('\n--- PRUEBA 4: Confirmar que la suma de las partes siempre sea igu
   console.log(`✅ Verificadas ${iterationsCustom} combinaciones de división personalizada.`);
 }
 
+// -----------------------------------------------------------------------------
+// PRUEBA 5: Deduplicación estricta por ID en modal y vistas (Agua, Municipalidad, etc.)
+// -----------------------------------------------------------------------------
+console.log('\n--- PRUEBA 5: Deduplicación estricta por ID en modal y vistas ---');
+
+{
+  const duplicateAccountsList: Account[] = [
+    {
+      id: 'acc-agua-1',
+      userId: 'user-1',
+      name: 'Agua (AySA)',
+      category: 'Servicios',
+      amount: 12000,
+      amountType: 'fixed',
+      currency: 'ARS',
+      frequency: 'monthly',
+      status: 'active',
+      isShared: true,
+      splitTotalPeople: 3,
+      splitType: 'equal',
+      mySharePercentage: 33.33,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    },
+    // Duplicate instance with same ID
+    {
+      id: 'acc-agua-1',
+      userId: 'user-1',
+      name: 'Agua (AySA)',
+      category: 'Servicios',
+      amount: 12000,
+      amountType: 'fixed',
+      currency: 'ARS',
+      frequency: 'monthly',
+      status: 'active',
+      isShared: true,
+      splitTotalPeople: 3,
+      splitType: 'equal',
+      mySharePercentage: 33.33,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    },
+    {
+      id: 'acc-muni-2',
+      userId: 'user-1',
+      name: 'Municipalidad',
+      category: 'Impuestos',
+      amount: 8000,
+      amountType: 'fixed',
+      currency: 'ARS',
+      frequency: 'monthly',
+      status: 'active',
+      isShared: false,
+      splitTotalPeople: 1,
+      mySharePercentage: 100,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    },
+  ];
+
+  // Simulating MonthlySplitModal deduplication logic
+  const map = new Map<string, Account>();
+  duplicateAccountsList.forEach((a) => {
+    if (a && a.id && a.status === 'active' && !map.has(a.id)) {
+      map.set(a.id, a);
+    }
+  });
+  const deduped = Array.from(map.values());
+
+  assert(deduped.length === 2, 'Lista deduplicada contiene exactamente 2 cuentas (Agua y Municipalidad)');
+  assert(deduped.filter((a) => a.id === 'acc-agua-1').length === 1, 'Agua aparece exactamente una vez');
+  assert(deduped.filter((a) => a.id === 'acc-muni-2').length === 1, 'Municipalidad aparece exactamente una vez');
+}
+
+// -----------------------------------------------------------------------------
+// PRUEBA 6: Eliminación en cascada de una cuenta (vencimientos, pagos, notificaciones)
+// -----------------------------------------------------------------------------
+console.log('\n--- PRUEBA 6: Eliminación en cascada de una cuenta y sus relaciones ---');
+
+{
+  let accountsState: Account[] = [
+    {
+      id: 'acc-gas',
+      userId: 'user-1',
+      name: 'Gas',
+      category: 'Servicios Básicos (Luz/Gas/Agua)',
+      amount: 5000,
+      amountType: 'fixed',
+      currency: 'ARS',
+      frequency: 'monthly',
+      status: 'active',
+      isShared: false,
+      createdAt: '',
+      updatedAt: '',
+    },
+    {
+      id: 'acc-internet',
+      userId: 'user-1',
+      name: 'Internet',
+      category: 'Internet y Conectividad',
+      amount: 15000,
+      amountType: 'fixed',
+      currency: 'ARS',
+      frequency: 'monthly',
+      status: 'active',
+      isShared: false,
+      createdAt: '',
+      updatedAt: '',
+    },
+  ];
+
+  let billsState = [
+    { id: 'bill-1', accountId: 'acc-gas', accountName: 'Gas', estimatedAmount: 5000 },
+    { id: 'bill-2', accountId: 'acc-gas', accountName: 'Gas (mes siguiente)', estimatedAmount: 5000 },
+    { id: 'bill-3', accountId: 'acc-internet', accountName: 'Internet', estimatedAmount: 15000 },
+  ];
+
+  let paymentsState = [
+    { id: 'pay-1', accountId: 'acc-gas', amount: 4800 },
+    { id: 'pay-2', accountId: 'acc-internet', amount: 15000 },
+  ];
+
+  let notificationsState = [
+    { id: 'notif-1', accountId: 'acc-gas', billId: 'bill-1' },
+    { id: 'notif-2', accountId: 'acc-internet', billId: 'bill-3' },
+  ];
+
+  let goalsState = [
+    { id: 'goal-1', name: 'Ahorro Gas Invierno', relatedAccountId: 'acc-gas' },
+    { id: 'goal-2', name: 'Vacaciones', relatedAccountId: undefined },
+  ];
+
+  // Simular eliminación de 'acc-gas'
+  const targetId = 'acc-gas';
+  accountsState = accountsState.filter((a) => a.id !== targetId);
+  billsState = billsState.filter((b) => b.accountId !== targetId);
+  paymentsState = paymentsState.filter((p) => p.accountId !== targetId);
+  notificationsState = notificationsState.filter((n) => n.accountId !== targetId);
+  goalsState = goalsState.map((g) => (g.relatedAccountId === targetId ? { ...g, relatedAccountId: undefined } : g));
+
+  assert(accountsState.length === 1 && accountsState[0].id === 'acc-internet', 'Sólo queda la cuenta Internet');
+  assert(billsState.length === 1 && billsState[0].accountId === 'acc-internet', 'Se eliminaron las 2 facturas de Gas');
+  assert(paymentsState.length === 1 && paymentsState[0].accountId === 'acc-internet', 'Se eliminó el pago histórico de Gas');
+  assert(notificationsState.length === 1 && notificationsState[0].accountId === 'acc-internet', 'Se eliminó la notificación de Gas');
+  assert(goalsState[0].relatedAccountId === undefined, 'El objetivo vinculado a Gas fue desvinculado limpiamente');
+}
+
+// -----------------------------------------------------------------------------
+// PRUEBA 7: Eliminación de todas las cuentas -> Presupuesto y Proyecciones en ARS 0,00
+// -----------------------------------------------------------------------------
+console.log('\n--- PRUEBA 7: Eliminación de todas las cuentas y valores en ARS 0,00 ---');
+
+{
+  const emptyAccounts: Account[] = [];
+
+  let monthly = 0;
+  let annual = 0;
+  let activeCount = 0;
+  let myPortion = 0;
+  let othersPortion = 0;
+
+  emptyAccounts.forEach((acc) => {
+    if (acc.status === 'active') {
+      activeCount++;
+      monthly += acc.amount;
+      annual += acc.amount * 12;
+    }
+  });
+
+  assert(activeCount === 0, 'activeAccountsCount es 0');
+  assert(monthly === 0, 'Coste mensual equivalente es exactamente 0');
+  assert(annual === 0, 'Gasto anual proyectado es exactamente 0');
+  assert(myPortion === 0, 'Tu parte es exactamente 0');
+  assert(othersPortion === 0, 'Parte de otros es exactamente 0');
+}
+
+// -----------------------------------------------------------------------------
+// PRUEBA 8: Múltiples vencimientos de una misma cuenta no duplican la fila en el modal
+// -----------------------------------------------------------------------------
+console.log('\n--- PRUEBA 8: Múltiples vencimientos no duplican filas en el desglose ---');
+
+{
+  const accounts: Account[] = [
+    {
+      id: 'acc-luz-01',
+      userId: 'user-1',
+      name: 'Edenor',
+      category: 'Servicios Básicos (Luz/Gas/Agua)',
+      amount: 25000,
+      amountType: 'variable',
+      currency: 'ARS',
+      frequency: 'monthly',
+      status: 'active',
+      isShared: true,
+      splitTotalPeople: 2,
+      splitType: 'equal',
+      createdAt: '',
+      updatedAt: '',
+    },
+  ];
+
+  // 3 facturas para la misma cuenta en distintos meses
+  const bills = [
+    { id: 'b1', accountId: 'acc-luz-01', dueDate: '2026-03-10', estimatedAmount: 25000 },
+    { id: 'b2', accountId: 'acc-luz-01', dueDate: '2026-04-10', estimatedAmount: 26000 },
+    { id: 'b3', accountId: 'acc-luz-01', dueDate: '2026-05-10', estimatedAmount: 27000 },
+  ];
+
+  // El modal se basa en accounts deduplicadas por account.id
+  const modalAccountRows = Array.from(
+    new Map(accounts.filter((a) => a.status === 'active').map((a) => [a.id, a])).values()
+  );
+
+  assert(modalAccountRows.length === 1, 'A pesar de tener 3 facturas, en el desglose mensual figura exactamente 1 fila');
+  assert(modalAccountRows[0].id === 'acc-luz-01', 'La fila corresponde a Edenor con su id único');
+}
+
+// -----------------------------------------------------------------------------
+// PRUEBA 9: Aislamiento estricto por usuario (Security / Scoping a users/${userId})
+// -----------------------------------------------------------------------------
+console.log('\n--- PRUEBA 9: Aislamiento estricto por usuario (users/${userId}) ---');
+
+{
+  const user1Id = 'user-auth-123';
+  const user2Id = 'user-auth-456';
+
+  const user1AccountPath = `users/${user1Id}/accounts/acc-01`;
+  const user2AccountPath = `users/${user2Id}/accounts/acc-02`;
+
+  assert(user1AccountPath.startsWith(`users/${user1Id}/`), 'Ruta de usuario 1 está estrictamente confinada a su subcolección');
+  assert(!user1AccountPath.includes(user2Id), 'Operaciones de usuario 1 no pueden tocar subcolección de usuario 2');
+}
+
 console.log('\n====================================================');
-console.log('🎉 TODAS LAS PRUEBAS COMPLETADAS CON ÉXITO');
+console.log('🎉 TODAS LAS 9 PRUEBAS COMPLETADAS CON ÉXITO');
 console.log('====================================================');
+

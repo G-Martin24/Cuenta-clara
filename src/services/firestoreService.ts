@@ -9,6 +9,7 @@ import {
   orderBy,
   where,
   writeBatch,
+  WriteBatch,
   getDocs,
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase/config';
@@ -42,6 +43,17 @@ export function cleanUndefined<T extends Record<string, any>>(obj: T): T {
   return result;
 }
 
+// Helper to commit operations in batches (under Firestore 500-write limit)
+async function commitBatchedOperations(operations: Array<(batch: WriteBatch) => void>): Promise<void> {
+  const CHUNK_SIZE = 450;
+  for (let i = 0; i < operations.length; i += CHUNK_SIZE) {
+    const chunk = operations.slice(i, i + CHUNK_SIZE);
+    const batch = writeBatch(db);
+    chunk.forEach((op) => op(batch));
+    await batch.commit();
+  }
+}
+
 // ----------------------------------------------------
 // ACCOUNTS
 // ----------------------------------------------------
@@ -57,11 +69,13 @@ export function subscribeAccounts(
   return onSnapshot(
     q,
     (snap) => {
-      const list: Account[] = [];
+      const map = new Map<string, Account>();
       snap.forEach((doc) => {
-        list.push(doc.data() as Account);
+        const item = doc.data() as Account;
+        const id = item.id || doc.id;
+        map.set(id, { ...item, id });
       });
-      onData(list);
+      onData(Array.from(map.values()));
     },
     (err) => {
       if (onError) onError(err);
@@ -227,23 +241,72 @@ export async function deleteAccount(
 ): Promise<void> {
   const path = `users/${userId}/accounts/${accountId}`;
   try {
-    const batch = writeBatch(db);
-    batch.delete(doc(db, 'users', userId, 'accounts', accountId));
+    const operations: Array<(batch: WriteBatch) => void> = [];
 
+    // 1. Delete account document by doc id
+    const accountRef = doc(db, 'users', userId, 'accounts', accountId);
+    operations.push((batch) => batch.delete(accountRef));
+
+    // Also delete any document where internal field 'id' matches accountId
+    const accountsRef = collection(db, 'users', userId, 'accounts');
+    const qAcc = query(accountsRef, where('id', '==', accountId));
+    const snapAcc = await getDocs(qAcc);
+    snapAcc.forEach((d) => {
+      operations.push((batch) => batch.delete(d.ref));
+    });
+
+    // 2. Cascade delete related bills, payments, notifications, and goal references
     if (deleteBillsToo) {
+      // Bills
       const billsRef = collection(db, 'users', userId, 'billInstances');
-      const q = query(billsRef, where('accountId', '==', accountId));
-      const snap = await getDocs(q);
-      snap.forEach((d) => {
-        batch.delete(d.ref);
+      const qBills = query(billsRef, where('accountId', '==', accountId));
+      const snapBills = await getDocs(qBills);
+      snapBills.forEach((d) => {
+        operations.push((batch) => batch.delete(d.ref));
+      });
+
+      // Payments
+      const paymentsRef = collection(db, 'users', userId, 'payments');
+      const qPayments = query(paymentsRef, where('accountId', '==', accountId));
+      const snapPayments = await getDocs(qPayments);
+      snapPayments.forEach((d) => {
+        operations.push((batch) => batch.delete(d.ref));
+      });
+
+      // Notifications directly linked to accountId
+      const notifsRef = collection(db, 'users', userId, 'notifications');
+      const qNotifs = query(notifsRef, where('accountId', '==', accountId));
+      const snapNotifs = await getDocs(qNotifs);
+      snapNotifs.forEach((d) => {
+        operations.push((batch) => batch.delete(d.ref));
+      });
+
+      // Notifications linked to any of the deleted bills (by billId)
+      for (const billDoc of snapBills.docs) {
+        const billId = billDoc.id;
+        const qBillNotifs = query(notifsRef, where('billId', '==', billId));
+        const snapBillNotifs = await getDocs(qBillNotifs);
+        snapBillNotifs.forEach((d) => {
+          operations.push((batch) => batch.delete(d.ref));
+        });
+      }
+
+      // Goals with reference to this account
+      const goalsRef = collection(db, 'users', userId, 'goals');
+      const qGoals = query(goalsRef, where('relatedAccountId', '==', accountId));
+      const snapGoals = await getDocs(qGoals);
+      snapGoals.forEach((d) => {
+        operations.push((batch) => batch.update(d.ref, { relatedAccountId: '' }));
       });
     }
 
-    await batch.commit();
+    await commitBatchedOperations(operations);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
 }
+
+
 
 // ----------------------------------------------------
 // BILL INSTANCES
@@ -260,11 +323,13 @@ export function subscribeBillInstances(
   return onSnapshot(
     q,
     (snap) => {
-      const list: BillInstance[] = [];
+      const map = new Map<string, BillInstance>();
       snap.forEach((doc) => {
-        list.push(doc.data() as BillInstance);
+        const item = doc.data() as BillInstance;
+        const id = item.id || doc.id;
+        map.set(id, { ...item, id });
       });
-      onData(list);
+      onData(Array.from(map.values()));
     },
     (err) => {
       if (onError) onError(err);
@@ -354,7 +419,25 @@ export async function deleteBillInstance(
 ): Promise<void> {
   const path = `users/${userId}/billInstances/${billId}`;
   try {
-    await deleteDoc(doc(db, 'users', userId, 'billInstances', billId));
+    const operations: Array<(batch: WriteBatch) => void> = [];
+
+    // 1. Delete bill instance by doc id
+    const billRef = doc(db, 'users', userId, 'billInstances', billId);
+    operations.push((batch) => batch.delete(billRef));
+
+    // Also delete any document where field 'id' matches billId
+    const billsRef = collection(db, 'users', userId, 'billInstances');
+    const qBill = query(billsRef, where('id', '==', billId));
+    const snapBill = await getDocs(qBill);
+    snapBill.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+
+    // Clean up notifications for this bill
+    const notifsRef = collection(db, 'users', userId, 'notifications');
+    const qNotifs = query(notifsRef, where('billId', '==', billId));
+    const snapNotifs = await getDocs(qNotifs);
+    snapNotifs.forEach((d) => operations.push((batch) => batch.delete(d.ref)));
+
+    await commitBatchedOperations(operations);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
@@ -542,11 +625,13 @@ export function subscribePayments(
   return onSnapshot(
     q,
     (snap) => {
-      const list: Payment[] = [];
+      const map = new Map<string, Payment>();
       snap.forEach((doc) => {
-        list.push(doc.data() as Payment);
+        const item = doc.data() as Payment;
+        const id = item.id || doc.id;
+        map.set(id, { ...item, id });
       });
-      onData(list);
+      onData(Array.from(map.values()));
     },
     (err) => {
       if (onError) onError(err);
@@ -674,11 +759,13 @@ export function subscribeNotifications(
   return onSnapshot(
     q,
     (snap) => {
-      const list: AppNotification[] = [];
+      const map = new Map<string, AppNotification>();
       snap.forEach((doc) => {
-        list.push(doc.data() as AppNotification);
+        const item = doc.data() as AppNotification;
+        const id = item.id || doc.id;
+        map.set(id, { ...item, id });
       });
-      onData(list);
+      onData(Array.from(map.values()));
     },
     (err) => {
       if (onError) onError(err);

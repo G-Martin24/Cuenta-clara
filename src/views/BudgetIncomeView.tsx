@@ -120,8 +120,11 @@ export const BudgetIncomeView: React.FC<BudgetIncomeViewProps> = ({
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const sharedMonthBills = useMemo(() => {
-    return bills.filter((b) => b.isShared && b.dueDate.startsWith(currentMonthKey));
-  }, [bills, currentMonthKey]);
+    const validAccountIds = new Set(accounts.map((a) => a.id));
+    return bills.filter(
+      (b) => b.isShared && b.dueDate.startsWith(currentMonthKey) && validAccountIds.has(b.accountId)
+    );
+  }, [bills, currentMonthKey, accounts]);
 
   // Group incomes by category for detailed cash flow analysis
   const incomesByCategory = useMemo(() => {
